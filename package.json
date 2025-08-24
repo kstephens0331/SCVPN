@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "scvpn:postsetup": "node ./scripts/scvpn-postsetup.js",
+    "start": "node server/index.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.56.0",
