@@ -1,0 +1,48 @@
+﻿import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
+
+export default function BusinessAccount(){
+  const [orgs, setOrgs] = useState([]); const [orgId, setOrgId] = useState("");
+  const [org, setOrg] = useState({ name:"", slug:"", plan:"" }); const [msg, setMsg] = useState("");
+
+  useEffect(()=>{ (async()=>{
+    const { data: os } = await supabase.from("organizations").select("id,name,slug,plan").order("name");
+    setOrgs(os || []);
+    if (os && os[0]) { setOrgId(os[0].id); setOrg(os[0]); }
+  })(); },[]);
+
+  useEffect(()=>{ (async()=>{
+    if (!orgId) return;
+    const { data } = await supabase.from("organizations").select("id,name,slug,plan").eq("id", orgId).maybeSingle();
+    if (data) setOrg(data);
+  })(); },[orgId]);
+
+  async function save(){
+    const { error } = await supabase.from("organizations").update({ name: org.name, slug: org.slug, plan: org.plan }).eq("id", orgId);
+    setMsg(error ? error.message : "Saved");
+    setTimeout(()=>setMsg(""), 2000);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="text-sm text-lime-400/90">Organization</label>
+        <select value={orgId} onChange={e=>setOrgId(e.target.value)} className="ml-2 rounded px-3 py-2 bg-black/40 ring-1 ring-gray-800">
+          {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+        </select>
+      </div>
+      <div className="rounded-2xl bg-gray-900 ring-1 ring-gray-800 p-5 grid gap-3 max-w-xl">
+        <label className="text-sm">Name</label>
+        <input value={org.name||""} onChange={e=>setOrg({...org,name:e.target.value})} className="rounded px-3 py-2 bg-black/40 ring-1 ring-gray-800"/>
+        <label className="text-sm">Slug</label>
+        <input value={org.slug||""} onChange={e=>setOrg({...org,slug:e.target.value})} className="rounded px-3 py-2 bg-black/40 ring-1 ring-gray-800"/>
+        <label className="text-sm">Plan</label>
+        <select value={org.plan||""} onChange={e=>setOrg({...org,plan:e.target.value})} className="rounded px-3 py-2 bg-black/40 ring-1 ring-gray-800">
+          {["free","pro","enterprise","personal","gaming","business10","business50","business250"].map(p=><option key={p} value={p}>{p}</option>)}
+        </select>
+        <button onClick={save} className="rounded px-4 py-2 bg-lime-400 text-black font-semibold w-fit">Save</button>
+        {msg && <div className="text-lime-300 text-sm">{msg}</div>}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,11 @@
+﻿[project]
+ref = "ltwuqjmncldopkutiyak"
+[functions.checkout]
+verify_jwt = false
+
+[functions.checkout-verify]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+

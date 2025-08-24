@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Tailwind v4: declare custom tokens here */
+@theme {
+  --color-primary: #1D2B53;
+  --color-secondary: #D72638;
+  --color-accent: #4F97A3;
+  --color-background: #F9F9F9;
+  --color-dark: #1C1C1E;
+
+  --font-heading: "Montserrat", sans-serif;
+  --font-body: "Open Sans", sans-serif;
+  --font-code: "Fira Code", monospace;
+
+  --radius-xl: 14px;
+  --radius-2xl: 16px;
+}
+
+/* Your component utilities */
+@layer components {
+  .button-primary { @apply inline-flex items-center justify-center rounded-xl bg-secondary px-5 py-3 font-semibold text-white shadow hover:opacity-90 transition; }
+  .button-outline { @apply inline-flex items-center justify-center rounded-xl border border-secondary px-5 py-3 font-semibold text-secondary hover:bg-secondary/10 transition; }
+  .card { @apply rounded-2xl bg-white shadow-md ring-1 ring-black/5; }
+  .container-xl { @apply max-w-6xl mx-auto px-4; }
+  h1,h2,h3 { @apply font-heading; }
+}
