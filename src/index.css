@@ -1,110 +1,47 @@
-﻿html, body, #root { background:#fff !important; color:#111; min-height:100%; }
+﻿/* Global look & feel (keep it light; Tailwind handles most styling) */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
+  color-scheme: light;
+  color: #111;
+  background-color: #fff;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
+html, body, #root {
+  min-height: 100%;
+  width: 100%;
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+a {
+  color: #646cff;
+  text-decoration: none;
 }
+a:hover { color: #535bf2; }
 
 button {
   border-radius: 8px;
   border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  padding: 0.6rem 1.2rem;
+  font: inherit;
+  background-color: #f9f9f9;
   cursor: pointer;
   transition: border-color 0.25s;
 }
-button:hover {
-  border-color: #646cff;
-}
+button:hover { border-color: #646cff; }
 button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
+button:focus-visible { outline: 4px auto -webkit-focus-ring-color; }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
-html, body { background: #0b0b0f; }
-html, body {
-  
-  color: #84cc16; /* lime green text default */
-}
-/* removed global black bg; admin handles its own theme */
-/* SCVPN auth centering + dark theme helpers */
-/* removed global black bg; admin handles its own theme */
-/* --- SCVPN admin centering --- */
+/* Admin layout specific helper (centering container used in admin pages) */
 .admin-container{
   width: 100%;
-  max-width: 1280px;     /* â‰ˆ Tailwind max-w-7xl */
+  max-width: 1280px;
   margin-left: auto;
-  margin-right: auto;    /* <- true centering */
+  margin-right: auto;
 }
-/* removed global black bg; admin handles its own theme */
 
-
-/* Public site utilities */
-.container-xl { max-width: 80rem; margin-left:auto; margin-right:auto; padding-left:1.5rem; padding-right:1.5rem; }
-.card { background:#ffffff; border:1px solid #e5e7eb; border-radius:0.75rem; box-shadow:0 1px 2px rgba(0,0,0,.05); }
-.button-primary { background:#dc2626; color:#000; font-weight:600; padding:.75rem 1rem; border-radius:.5rem; display:inline-block; }
-.button-primary:hover { background:#ef4444; }
-.button-outline { border:1px solid #dc2626; color:#dc2626; padding:.75rem 1rem; border-radius:.5rem; display:inline-block; }
-.button-outline:hover { background:#fff5f5; }
-
-
-/* Public site utilities */
-.container-xl { max-width: 80rem; margin-left:auto; margin-right:auto; padding-left:1.5rem; padding-right:1.5rem; }
-.card { background:#ffffff; border:1px solid #e5e7eb; border-radius:0.75rem; box-shadow:0 1px 2px rgba(0,0,0,.05); }
-.button-primary { background:#dc2626; color:#000; font-weight:600; padding:.75rem 1rem; border-radius:.5rem; display:inline-block; }
-.button-primary:hover { background:#ef4444; }
-.button-outline { border:1px solid #dc2626; color:#dc2626; padding:.75rem 1rem; border-radius:.5rem; display:inline-block; }
-.button-outline:hover { background:#fff5f5; }
-html, body, #root { background:#fff !important; color:#111; min-height:100%; }
-html, body, #root {
-  background:#fff !important;
-  color:#111;
-  min-height:100%;
-  width:100%;
-}
+/* Keep public-site helpers in Tailwind @layer (styles.css), not here */

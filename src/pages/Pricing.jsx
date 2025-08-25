@@ -2,7 +2,6 @@
 import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
-import { startCheckout } from '../utils/checkout';
 import { planToStripe } from '../utils/planMap';
 import { supabase } from "../lib/supabase";
 
