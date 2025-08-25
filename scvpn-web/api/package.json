@@ -1,7 +1,8 @@
 {
   "name": "scvpn-api",
-  "private": true,
+  "version": "1.0.0",
   "type": "module",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
@@ -9,7 +10,6 @@
     "@supabase/supabase-js": "^2.56.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "node-fetch": "^3.3.2",
-    "stripe": "^16.5.0"
+    "stripe": "^16.0.0"
   }
 }
