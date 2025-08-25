@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabase"
 // NOTE: call Edge Function via full Supabase URL (no proxy needed)
 async function adminAction(action, deviceId){
   const { data: { user } } = await supabase.auth.getUser()
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-device`
+  const url = `${import.meta.env.VITE_API_URL}/api/admin-device`
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-admin-email": user.email },

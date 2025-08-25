@@ -4,6 +4,24 @@ import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
 import { startCheckout } from '../utils/checkout';
 import { planToStripe } from '../utils/planMap';
+import { supabase } from "../lib/supabase";
+
+
+async function startCheckout(planCode) {
+  // Optional: include user email for Stripe “customer_email”
+  const { data: { user } } = await supabase.auth.getUser();
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/api/checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      plan_code: planCode,
+      customer_email: user?.email || undefined,
+    }),
+  });
+  const { url, error } = await res.json();
+  if (error) { alert(error); return; }
+  window.location.href = url; // send user to Stripe Checkout
+}
 
 function handlePlanClick(e, plan) {
   e.preventDefault();
