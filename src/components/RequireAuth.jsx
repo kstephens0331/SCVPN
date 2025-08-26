@@ -1,18 +1,22 @@
-﻿import { Navigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+﻿// src/components/RequireAuth.jsx
+import { Navigate, useLocation } from "react-router-dom";
+import { useSessionRole } from "../useSessionRole";
 
 export default function RequireAuth({ children }) {
-  const [ready, setReady] = useState(false);
-  const [user, setUser] = useState(null);
+  const { session, role, loading } = useSessionRole();
   const loc = useLocation();
-  useEffect(()=>{
-    supabase.auth.getUser().then(({data})=>{
-      setUser(data?.user || null);
-      setReady(true);
-    });
-  },[]);
-  if (!ready) return null;
-  if (!user) return <Navigate to="/login" replace state={{ from: loc }} />;
+
+  if (loading) return null; // or a spinner
+
+  if (!session?.user) {
+    return <Navigate to="/login" state={{ from: loc }} replace />;
+  }
+
+  // smart routing when landing on generic areas
+  if (loc.pathname === "/admin" && role !== "admin") {
+    // not admin; kick to personal/business overview
+    return <Navigate to="/app/personal/overview" replace />;
+  }
+
   return children;
 }

@@ -1,3 +1,4 @@
+// src/useSessionRole.js
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "./supabase";
 
@@ -14,35 +15,66 @@ export function useSessionRole() {
       if (!mounted) return;
       setSession(session);
 
-      if (session?.user?.id) {
-        const { data, error } = await supabase
+      // resolve role if we’re logged in
+      if (session?.user) {
+        const uid = session.user.id;
+        const email = session.user.email;
+
+        // primary source: profiles.role where id = auth.users.id
+        const { data: p } = await supabase
           .from("profiles")
           .select("role")
-          .eq("user_id", session.user.id)
+          .eq("id", uid)
           .single();
-        if (!mounted) return;
-        if (!error) setRole(data?.role ?? null);
+
+        let r = p?.role ?? null;
+
+        // fallback: treat as admin if listed in admin_emails (or your “authorization” table)
+        if (!r && email) {
+          const { data: adminRow } = await supabase
+            .from("admin_emails")
+            .select("email,is_admin,role")
+            .eq("email", email)
+            .maybeSingle();
+
+          if (adminRow?.is_admin || adminRow?.role === "admin") r = "admin";
+        }
+
+        setRole(r);
       }
+
       setLoading(false);
     };
 
     init();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, s) => {
+    // live auth changes
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, s) => {
       setSession(s);
-      if (!s?.user?.id) {
-        setRole(null);
+      if (s?.user) {
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", s.user.id)
+          .single();
+        let r = p?.role ?? null;
+
+        if (!r && s.user.email) {
+          const { data: adminRow } = await supabase
+            .from("admin_emails")
+            .select("email,is_admin,role")
+            .eq("email", s.user.email)
+            .maybeSingle();
+          if (adminRow?.is_admin || adminRow?.role === "admin") r = "admin";
+        }
+
+        setRole(r);
       } else {
-        // refresh role on sign-in
-        supabase.from("profiles").select("role")
-          .eq("user_id", s.user.id).single()
-          .then(({ data, error }) => {
-            if (!error) setRole(data?.role ?? null);
-          });
+        setRole(null);
       }
     });
 
-    return () => { mounted = false; sub.subscription?.unsubscribe(); };
+    return () => sub.subscription?.unsubscribe();
   }, []);
 
   return useMemo(() => ({ session, role, loading }), [session, role, loading]);

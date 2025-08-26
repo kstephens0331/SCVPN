@@ -13,6 +13,7 @@ import AdminDevices from "./pages/admin/devices";
 import AdminTelemetry from "./pages/admin/telemetry";
 import AdminServers from "./pages/admin/servers";
 import AdminAnalytics from "./pages/admin/analytics";
+import AdminRoute from "./components/AdminRoute";
 
 import BusinessLayout from "./pages/business/Layout";
 import BusinessOverview from "./pages/business/Overview";
@@ -55,14 +56,24 @@ export default function App() {
   <Route path="account"  element={<BusinessAccount/>} />
   <Route path="billing"  element={<BusinessBilling/>} />
 </Route>
-    <Route path="/admin/*" element={<RequireAuth><AdminLayout/></RequireAuth>}>
-      <Route path="overview"  element={<AdminOverview/>} />
-      <Route path="accounts"  element={<AdminAccounts/>} />
-      <Route path="devices"   element={<AdminDevices/>} />
-      <Route path="telemetry" element={<AdminTelemetry/>} />
-      <Route path="servers"   element={<AdminServers/>} />
-      <Route path="analytics" element={<AdminAnalytics/>} />
-    </Route>
+    <Route
+  path="/admin/*"
+  element={
+    <RequireAuth>
+      <AdminRoute>
+        <AdminLayout />
+      </AdminRoute>
+    </RequireAuth>
+  }
+>
+  <Route index element={<AdminOverview />} />
+  <Route path="overview" element={<AdminOverview />} />
+  <Route path="devices" element={<AdminDevices />} />
+  <Route path="servers" element={<AdminServers />} />
+  <Route path="accounts" element={<AdminAccounts />} />
+  <Route path="telemetry" element={<AdminTelemetry />} />
+  <Route path="analytics" element={<AdminAnalytics />} />
+</Route>
 
   <Route path="/post-checkout" element={<PostCheckout/>} />
 </Routes>
