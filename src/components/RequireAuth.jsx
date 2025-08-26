@@ -1,6 +1,6 @@
 ﻿// src/components/RequireAuth.jsx
 import { Navigate, useLocation } from "react-router-dom";
-import { useSessionRole } from "../useSessionRole";
+import { useSessionRole } from "../lib/useSessionRole";
 
 export default function RequireAuth({ children }) {
   const { session, role, loading } = useSessionRole();
