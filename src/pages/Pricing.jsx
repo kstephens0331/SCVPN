@@ -2,35 +2,40 @@
 import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
-import { planToStripe } from '../utils/planMap';
-import { supabase } from "../lib/supabase";
+import { planToStripe } from "../utils/planMap.js";
+import { API_BASE } from "../lib/apiBase.js"; // no alias to avoid build issues
 
-
-async function startCheckout(planCode) {
-  // Optional: include user email for Stripe “customer_email”
-  const { data: { user } } = await supabase.auth.getUser();
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/api/checkout`, {
+async function startCheckout(planId) {
+  const res = await fetch(`${API_BASE}/api/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      plan_code: planCode,
-      customer_email: user?.email || undefined,
-    }),
+    body: JSON.stringify({ planId }),
   });
-  const { url, error } = await res.json();
-  if (error) { alert(error); return; }
-  window.location.href = url; // send user to Stripe Checkout
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Checkout failed: ${res.status} ${text || ""}`.trim());
+  }
+
+  const data = await res.json();
+  if (!data?.url) throw new Error("No checkout URL returned");
+  window.location.assign(data.url);
 }
 
 function handlePlanClick(e, plan) {
   e.preventDefault();
   try {
     const cfg = planToStripe(plan);
-    if (!cfg) { alert('This plan is not configured yet.'); return; }
-    startCheckout(cfg);
+    // Expect cfg like { priceId: 'price_...' } or { planId: '...' }
+    const planId = cfg?.priceId ?? cfg?.planId;
+    if (!planId) {
+      alert("This plan is not configured yet.");
+      return;
+    }
+    startCheckout(planId);
   } catch (err) {
     console.error(err);
-    alert('Unable to start checkout');
+    alert("Unable to start checkout");
   }
 }
 
@@ -129,4 +134,3 @@ function PlanCard({ plan }) {
     </div>
   );
 }
-
