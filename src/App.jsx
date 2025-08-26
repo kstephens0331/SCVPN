@@ -6,6 +6,14 @@ import PersonalDevices from "./pages/personal/Devices";
 import PersonalAccount from "./pages/personal/Account";
 import PersonalBilling from "./pages/personal/Billing";
 
+import AdminLayout from "./pages/admin/layout";
+import AdminOverview from "./pages/admin/overview";
+import AdminAccounts from "./pages/admin/accounts";
+import AdminDevices from "./pages/admin/devices";
+import AdminTelemetry from "./pages/admin/telemetry";
+import AdminServers from "./pages/admin/servers";
+import AdminAnalytics from "./pages/admin/analytics";
+
 import BusinessLayout from "./pages/business/Layout";
 import BusinessOverview from "./pages/business/Overview";
 import BusinessDevices from "./pages/business/Devices";
@@ -47,6 +55,15 @@ export default function App() {
   <Route path="account"  element={<BusinessAccount/>} />
   <Route path="billing"  element={<BusinessBilling/>} />
 </Route>
+    <Route path="/admin/*" element={<RequireAuth><AdminLayout/></RequireAuth>}>
+      <Route path="overview"  element={<AdminOverview/>} />
+      <Route path="accounts"  element={<AdminAccounts/>} />
+      <Route path="devices"   element={<AdminDevices/>} />
+      <Route path="telemetry" element={<AdminTelemetry/>} />
+      <Route path="servers"   element={<AdminServers/>} />
+      <Route path="analytics" element={<AdminAnalytics/>} />
+    </Route>
+
   <Route path="/post-checkout" element={<PostCheckout/>} />
 </Routes>
   );

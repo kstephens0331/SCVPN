@@ -10,6 +10,14 @@ export default function AppLanding() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate("/login", { replace: true }); return; }
 
+   // 1) Admin by allow-list table (admin_emails)
+   const { data: adminRow } = await supabase
+      .from("admin_emails")
+      .select("email")
+      .eq("email", user.email?.toLowerCase() || "")
+     .maybeSingle();
+      if (adminRow) { navigate("/admin/overview", { replace: true }); return; }
+
       // get account_type from profiles
       const { data: profile } = await supabase
         .from("profiles")
@@ -18,7 +26,7 @@ export default function AppLanding() {
         .maybeSingle();
 
       if (profile?.account_type === "admin") {
-        navigate("/admin", { replace: true }); return;
+        navigate("/admin/overview", { replace: true }); return;
       }
 
       // treat business account_type OR any org membership as business
