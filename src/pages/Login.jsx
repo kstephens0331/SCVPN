@@ -20,7 +20,7 @@ export default function Login(){
     setLoading(false)
     if (error) { setErr(error.message); return }
     await refresh()
-    nav(loc.state?.from?.pathname || "/app", { replace: true })
+    nav("/app", { replace: true })
   }
 
   return (
@@ -50,7 +50,7 @@ export default function Login(){
             disabled={loading}
             className="rounded-md bg-lime-400 text-black font-semibold px-3 py-2 hover:bg-lime-300 disabled:opacity-60"
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Signing inï¿½" : "Sign in"}
           </button>
         </form>
       </div>

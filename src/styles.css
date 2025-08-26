@@ -1,3 +1,31 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ---- Site helpers (Tailwind-native) ---- */
+@layer utilities {
+  /* used by admin layout */
+  .admin-container { @apply w-full max-w-7xl mx-auto; }
+}
+
+@layer components {
+  .container-xl { @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
+
+  .card { @apply rounded-2xl border border-black/10 bg-white shadow-sm; }
+
+  .button-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-black text-white font-semibold
+           px-4 py-2 hover:bg-neutral-900 transition;
+  }
+  .button-outline {
+    @apply inline-flex items-center justify-center rounded-xl border border-black/20 text-black font-semibold
+           px-4 py-2 hover:bg-black hover:text-white transition;
+  }
+
+  /* minimal brand shims used in pages */
+  .text-primary { @apply text-black; }
+  .bg-primary   { @apply bg-black; }
+  .text-secondary { @apply text-gray-500; }
+  .bg-secondary { @apply bg-lime-600; }
+  .text-dark    { @apply text-black; }
+}
