@@ -29,3 +29,24 @@
   .bg-secondary { @apply bg-lime-600; }
   .text-dark    { @apply text-black; }
 }
+
+@layer components {
+  /* Headings */
+  h1, h2, h3 {
+    @apply text-red-600;
+  }
+
+  /* Buttons + CTAs */
+  .button-primary,
+  .button-outline,
+  button,
+  a.button-primary,
+  a.button-outline {
+    @apply bg-red-600 text-white font-semibold hover:bg-red-700;
+  }
+
+  /* Outline buttons still red but bordered */
+  .button-outline {
+    @apply bg-transparent border border-red-600 text-red-600 hover:bg-red-600 hover:text-white;
+  }
+}
