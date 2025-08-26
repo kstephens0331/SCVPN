@@ -1,7 +1,7 @@
 // components/AdminRoute.jsx
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "../supabase";
+import { supabase } from "../lib/supabase";
 
 /**
  * Allows access only if the signed-in user's email is in public.admin_emails.
