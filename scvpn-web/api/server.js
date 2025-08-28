@@ -1,12 +1,12 @@
 // server.js — SCVPN API (Express, Stripe, Supabase; single file)
 import express from "express";
-// import cors from "cors"; // not needed since you wrote a custom CORS layer
+// import cors from "cors"; // not needed since we use a custom CORS layer
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
 // ---------- env & wiring ----------
 const {
-  PORT = 8000,
+  PORT = process.env.PORT || 8000,
 
   // Frontend URLs
   SITE_URL,                     // e.g. https://www.sacvpn.com
@@ -56,7 +56,7 @@ const cancelUrl =
     : `http://localhost:5173/pricing?status=cancel`);
 
 // ---------- app ----------
-const app = express(); // define app before using it
+const app = express();
 
 // --- Custom CORS middleware (handles preflight) ---
 const rawAllow = (ALLOWED_ORIGINS || "")
@@ -104,7 +104,7 @@ app.use((req, res, next) => {
   });
 });
 
-// Root for Railway/health checks (prevents 404 “Cannot GET /”)
+// Root for Railway/health checks (prevents “Cannot GET /” & restarts)
 app.get("/", (_req, res) => {
   res.type("text/plain").send("SCVPN API OK");
 });
