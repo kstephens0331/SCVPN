@@ -56,7 +56,7 @@ const cancelUrl =
     : `http://localhost:5173/pricing?status=cancel`);
 
 // ---------- app ----------
-const app = express(); // 🔧 (fix) define app before using it
+const app = express(); // define app before using it
 
 // --- Custom CORS middleware (handles preflight) ---
 const rawAllow = (ALLOWED_ORIGINS || "")
