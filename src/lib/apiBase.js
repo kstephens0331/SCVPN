@@ -1,18 +1,16 @@
 // src/lib/apiBase.js
-export const API_BASE = (() => {
-  const trim = (s) => s?.trim().replace(/\/+$/, '');
-  // Prefer Railway API if you moved your server there
-  const rail = trim(import.meta.env.VITE_RAILWAY_API_URL);
-  if (rail) return rail;
+function pickEnv(...vals) {
+  for (const v of vals) {
+    if (v && v !== 'undefined' && v !== 'null') return v;
+  }
+  return null;
+}
 
-  // Explicit site URL (works on Vercel preview/prod if you set it)
-  const site = trim(import.meta.env.VITE_SITE_URL);
-  if (site) return site;
+const fromVite = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE);
+const fromNext = (typeof process !== 'undefined' && process.env && (process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE));
+const fromWindow = (typeof window !== 'undefined' && window.location.origin);
 
-  // Vercel provides VERCEL_URL without protocol
-  const vercel = trim(import.meta.env.VERCEL_URL);
-  if (vercel) return `https://${vercel}`;
+const base = pickEnv(fromVite, fromNext, fromWindow, 'https://sacvpn.com');
 
-  // Fallback to browser origin (local dev)
-  return window.location.origin;
-})();
+// ensure no trailing slash
+export const API_BASE = base.replace(/\/$/, '');

@@ -1,7 +1,5 @@
-﻿/**
- * Map PLANS[...].code -> Stripe price and metadata.
- * Replace the placeholder price_XXX with your real Stripe price IDs.
- */
+﻿import { PLANS } from "../lib/pricing";
+
 const MAP = {
   personal:    { price_id: "personal",  plan_code: "personal_unlimited_monthly", account_type: "personal", quantity: 1 },
   gaming:      { price_id: "gaming",    plan_code: "gaming_monthly",             account_type: "personal", quantity: 1 },
@@ -11,7 +9,9 @@ const MAP = {
 };
 
 export function planToStripe(plan) {
-  const key = plan && plan.code;
-  const m = MAP[key];
-  return m ? { ...m } : null;
+  if (!plan || !plan.stripePriceId) return null;
+  return {
+    priceId: plan.stripePriceId,
+    name: plan.name,
+  };
 }
