@@ -18,7 +18,7 @@ export default function FAQComparison(){
             </tr>
           </thead>
           <tbody>
-            {COMPETITORS.map((c,i)=>(
+            {(COMPETITORS ?? []).map((c,i)=>(
               <tr key={i} className="bg-white shadow-sm">
                 <td className="px-4 py-3 font-semibold">{c.name}</td>
                 <td className="px-4 py-3">{c.price}</td>
@@ -47,7 +47,7 @@ export default function FAQComparison(){
             </tr>
           </thead>
           <tbody>
-            {FEATURES.map((row,i)=>(
+            {(FEATURES ?? []).map((row,i)=>(
               <tr key={i} className="bg-white shadow-sm">
                 <td className="px-4 py-3 font-medium">{row.feature}</td>
                 <td className="px-4 py-3 font-semibold text-primary">{row.sacvpn}</td>

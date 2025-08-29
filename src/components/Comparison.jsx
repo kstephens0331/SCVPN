@@ -14,7 +14,7 @@ export default function Comparison(){
             </tr>
           </thead>
           <tbody>
-            {COMP_TABLE.map((row, i)=>(
+            {(COMP_TABLE ?? []).map((row, i)=>(
               <tr key={i} className="bg-white rounded-xl shadow-sm">
                 <td className="px-4 py-3 font-medium">{row.feature}</td>
                 <td className="px-4 py-3 text-primary font-semibold">{row.sacvpn}</td>

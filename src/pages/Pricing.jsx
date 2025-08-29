@@ -1,4 +1,4 @@
-﻿import { PLANS } from "../lib/pricing.js";
+import { PLANS } from "../lib/pricing.js";
 import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
@@ -74,7 +74,7 @@ export default function Pricing() {
             Unlimited devices on both plans. Gaming adds optimized routes for lower latency.
           </p>
           <div className="grid md:grid-cols-2 gap-6 mt-6">
-            {personalCards.map((p) => (
+            {(personalCards ?? []).map((p) => (
               <PlanCard key={p.code} plan={p} />
             ))}
           </div>
@@ -87,7 +87,7 @@ export default function Pricing() {
             Clear device quotas for teams. Add or revoke devices anytime from your dashboard.
           </p>
           <div className="grid md:grid-cols-3 gap-6 mt-6">
-            {businessCards.map((p) => (
+            {(businessCards ?? []).map((p) => (
               <PlanCard key={p.code} plan={p} />
             ))}
           </div>
@@ -122,7 +122,7 @@ function PlanCard({ plan }) {
         <span className="text-gray-600">/mo</span>
       </div>
       <ul className="mt-4 text-gray-700 space-y-2">
-        {plan.features.map((f, i) => (
+        {(plan.features ?? []).map((f, i) => (
           <CheckItem key={i}>{f}</CheckItem>
         ))}
       </ul>

@@ -9,7 +9,7 @@ export default function HowItWorks(){
     <section className="container-xl py-16">
       <h2 className="text-3xl font-bold">How SACVPN works</h2>
       <div className="grid md:grid-cols-3 gap-6 mt-8">
-        {steps.map((s,i)=>(
+        {(steps ?? []).map((s,i)=>(
           <div key={i} className="card p-6">
             <s.icon className="h-8 w-8 text-primary" />
             <h3 className="mt-4 font-semibold text-lg">{s.title}</h3>

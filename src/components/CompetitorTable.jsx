@@ -26,7 +26,7 @@ export default function CompetitorTable(){
               <td className="px-4 py-3">{SACVPN_ADVANTAGES.logs}</td>
               <td className="px-4 py-3">{SACVPN_ADVANTAGES.gaming}</td>
             </tr>
-            {COMPETITORS.map((c,i)=>(
+            {(COMPETITORS ?? []).map((c,i)=>(
               <tr key={i} className="bg-white shadow-sm">
                 <td className="px-4 py-3 font-semibold">{c.name}</td>
                 <td className="px-4 py-3">{c.price}</td>
