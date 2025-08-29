@@ -2,39 +2,43 @@ import { PLANS } from "../lib/pricing.js";
 import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
-import { API_BASE } from "../lib/apiBase.js"; // no alias to avoid build issues
+// remove this old import; server maps codes -> price IDs
+// import { planToStripe } from "../utils/planMap.js";
 
 const API = import.meta.env.VITE_API_URL;
 
+if (!API) {
+  // Helpful during dev if someone forgets to set the env
+  // eslint-disable-next-line no-console
+  console.error("VITE_API_URL is not set — cannot call /api/checkout");
+}
+
+/** Create Stripe Checkout session on the API and redirect */
 async function startCheckout(planCode, accountType = "personal", qty = 1) {
+  if (!API) throw new Error("Missing VITE_API_URL in frontend env");
+
   const res = await fetch(`${API}/api/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      plan_code: planCode,            // "personal" | "gaming" | "business10" | ...
-      account_type: accountType,
-      quantity: qty
-    }),
+    body: JSON.stringify({ plan_code: planCode, account_type: accountType, quantity: qty }),
   });
+
   if (!res.ok) {
     const msg = await res.text().catch(() => "");
     throw new Error(`Checkout failed: ${res.status} ${msg}`);
   }
+
   const out = await res.json();
   if (!out.url) throw new Error("No checkout URL returned");
-  window.location.href = out.url;     // go to Stripe Checkout
+  window.location.href = out.url; // go to Stripe Checkout
 }
 
-
+/** Handle clicks: send plan.code (server maps it to Stripe price) */
 function handlePlanClick(e, plan) {
   e.preventDefault();
   const accountType = plan.accountType || (plan.business ? "business" : "personal");
   startCheckout(plan.code, accountType);
 }
-
-
-
-
 
 const personalCards = [PLANS.personal, PLANS.gaming];
 const businessCards = [PLANS.business10, PLANS.business50, PLANS.business250];
