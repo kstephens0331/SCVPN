@@ -2,14 +2,11 @@ import { PLANS } from "../lib/pricing.js";
 import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
-// remove this old import; server maps codes -> price IDs
-// import { planToStripe } from "../utils/planMap.js";
+// remove: import { planToStripe } from "../utils/planMap.js";
 
 const API = import.meta.env.VITE_API_URL;
 
 if (!API) {
-  // Helpful during dev if someone forgets to set the env
-  // eslint-disable-next-line no-console
   console.error("VITE_API_URL is not set — cannot call /api/checkout");
 }
 
