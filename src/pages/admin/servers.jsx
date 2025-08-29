@@ -3,6 +3,7 @@ import express from "express";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
+export default function AdminServers() {
 /* ========= ENV ========= */
 const {
   PORT = process.env.PORT || 8000,
@@ -198,3 +199,4 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`[scvpn-api] listening on :${PORT}`);
   console.log("Allowed origins:", Array.from(ALLOW_SET));
 });
+}
