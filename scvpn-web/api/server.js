@@ -44,6 +44,35 @@ const supabase =
       })
     : null;
 
+    // --- Hard CORS shim (before any routes) ---
+const ALLOW = new Set([
+  "https://www.sacvpn.com",
+  "https://sacvpn.com",
+  "https://scvpn-5r0v1e6d2-kstephens0331s-projects.vercel.app",
+  "http://localhost:5173",
+]);
+
+app.use((req, res, next) => {
+  // only protect API routes; static or other routes unaffected
+  if (!req.path.startsWith("/api/")) return next();
+
+  const origin = req.headers.origin;
+  if (origin && ALLOW.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin"); // cache correctness
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-email");
+    // res.setHeader("Access-Control-Allow-Credentials", "true"); // only if using cookies
+  }
+
+  if (req.method === "OPTIONS") {
+    // Explicitly end preflight with 204 so proxies don’t transform to 502
+    return res.status(204).end();
+  }
+  return next();
+});
+// --- End CORS shim ---
+
 // ---- CORS ----
 const allowedOrigins = ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean);
 const corsOptions = {
