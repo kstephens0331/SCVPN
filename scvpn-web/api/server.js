@@ -10,7 +10,7 @@ const {
   NODE_ENV = "production",
   SITE_URL = "https://www.sacvpn.com",
 
-  // Frontend origins allowed to call this API
+  // Frontend origins allowed to call this API (comma-separated)
   ALLOWED_ORIGINS = "https://www.sacvpn.com,http://localhost:5173",
 
   // Stripe
@@ -37,23 +37,29 @@ if (!STRIPE_SECRET_KEY) {
 // ---- Clients ----
 const app = express();
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
-const supabase = (SCVPN_SUPABASE_URL && SCVPN_SUPABASE_SERVICE_KEY)
-  ? createClient(SCVPN_SUPABASE_URL, SCVPN_SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
-  : null;
+const supabase =
+  SCVPN_SUPABASE_URL && SCVPN_SUPABASE_SERVICE_KEY
+    ? createClient(SCVPN_SUPABASE_URL, SCVPN_SUPABASE_SERVICE_KEY, {
+        auth: { persistSession: false },
+      })
+    : null;
 
 // ---- CORS ----
-const allowedOrigins = ALLOWED_ORIGINS.split(",").map(s => s.trim()).filter(Boolean);
-app.use(cors({
+const allowedOrigins = ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean);
+const corsOptions = {
   origin(origin, cb) {
-    if (!origin) return cb(null, true); // allow server-to-server / curl
+    // allow same-origin / server-to-server (no Origin header)
+    if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error("Not allowed by CORS"));
   },
-  methods: ["GET","POST","OPTIONS","PUT","PATCH","DELETE"],
-  allowedHeaders: ["Content-Type","Authorization","x-admin-email"],
-  credentials: false, // set to true only if you need to exchange cookies across origins
-}));
-app.options("*", cors()); // preflight
+  methods: ["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-admin-email"],
+  credentials: false, // set true only if you need cross-site cookies
+};
+app.use(cors(corsOptions));
+// NOTE (Express 5): don't use app.options("*", ...) — it throws with path-to-regexp.
+// If you want to be explicit, you can do: app.options("/api/*", cors(corsOptions));
 
 // ---- Body parsing ----
 app.use(express.json());
@@ -152,7 +158,10 @@ app.get("/api/device/:id/config", async (req, res) => {
     if (!data) return res.status(404).send("not found");
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="${data.filename || `device-${id}.conf`}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${data.filename || `device-${id}.conf`}"`
+    );
     res.send(data.config_text || "");
   } catch (err) {
     console.error("[device config] error", err);
@@ -171,9 +180,13 @@ app.post("/api/admin-device", async (req, res) => {
     if (!action || !deviceId) return res.status(400).json({ error: "missing action/deviceId" });
 
     // Minimal authorization example (replace with RLS or role check as needed)
-    const { data: adminRow } = await supabase.from("profiles").select("email,role").eq("email", adminEmail).maybeSingle();
+    const { data: adminRow } = await supabase
+      .from("profiles")
+      .select("email,role")
+      .eq("email", adminEmail)
+      .maybeSingle();
     const role = adminRow?.role || "user";
-    if (!["owner","admin"].includes(role)) return res.status(403).json({ error: "forbidden" });
+    if (!["owner", "admin"].includes(role)) return res.status(403).json({ error: "forbidden" });
 
     if (action === "activate" || action === "suspend") {
       const is_active = action === "activate";
