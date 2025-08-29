@@ -1,16 +1,16 @@
-﻿// server.js — SCVPN API (Express, Stripe, Supabase)
+﻿// server.js — SCVPN API (Express + Stripe + Supabase)
 import express from "express";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-// ---------- env & wiring ----------
+/* ========= ENV ========= */
 const {
-  PORT = 8000,
+  PORT = process.env.PORT || 8000,
 
-  // Frontend URLs
-  SITE_URL,                  // e.g. https://www.sacvpn.com
-  SCVPN_SUCCESS_URL,         // optional override
-  SCVPN_CANCEL_URL,          // optional override
+  // Frontend URL(s)
+  SITE_URL,                 // e.g. https://www.sacvpn.com
+  SCVPN_SUCCESS_URL,
+  SCVPN_CANCEL_URL,
 
   // Stripe
   STRIPE_SECRET_KEY,
@@ -25,14 +25,63 @@ const {
   SCVPN_SUPABASE_URL,
   SCVPN_SUPABASE_SERVICE_KEY,
 
-  // CORS allowlist (optional, comma-separated)
+  // CORS allowlist (comma-separated). Example:
+  // "https://www.sacvpn.com,https://sacvpn.com,http://localhost:5173"
   ALLOWED_ORIGINS,
 } = process.env;
 
+/* ========= WIRING ========= */
+const app = express();
+
+// Build CORS allowlist
+const rawAllow = (ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+const defaults = [
+  SITE_URL,
+  "https://www.sacvpn.com",
+  "https://sacvpn.com",
+  "http://localhost:5173",
+  "http://localhost:3000",
+].filter(Boolean);
+const ALLOW_SET = new Set([...rawAllow, ...defaults]);
+
+// Minimal root + health for platform checks
+app.get("/", (_req, res) => {
+  res.type("text/plain").send("SCVPN API OK");
+});
+app.get("/api/healthz", (_req, res) => {
+  res.json({ ok: true, uptime: process.uptime() });
+});
+
+// CORS (do NOT apply to the webhook raw body route)
+const allowHeaders = "Content-Type, Authorization, Stripe-Signature";
+const allowMethods = "GET,POST,OPTIONS";
+app.use((req, res, next) => {
+  if (req.path === "/api/stripe/webhook") return next(); // leave raw
+
+  const origin = req.headers.origin;
+  if (origin && ALLOW_SET.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Headers", allowHeaders);
+    res.setHeader("Access-Control-Allow-Methods", allowMethods);
+    if (req.method === "OPTIONS") return res.sendStatus(204);
+  } else if (req.method === "OPTIONS") {
+    // For unknown origins, still answer preflight safely (no credentials)
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", allowHeaders);
+    res.setHeader("Access-Control-Allow-Methods", allowMethods);
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+/* ========= STRIPE / SUPABASE ========= */
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
-const supabase = (SCVPN_SUPABASE_URL && SCVPN_SUPABASE_SERVICE_KEY)
-  ? createClient(SCVPN_SUPABASE_URL, SCVPN_SUPABASE_SERVICE_KEY)
-  : null;
+const supabase =
+  SCVPN_SUPABASE_URL && SCVPN_SUPABASE_SERVICE_KEY
+    ? createClient(SCVPN_SUPABASE_URL, SCVPN_SUPABASE_SERVICE_KEY)
+    : null;
 
 const PRICE_MAP = {
   personal: STRIPE_PRICE_PERSONAL,
@@ -45,74 +94,16 @@ const PRICE_MAP = {
 const successUrl =
   SCVPN_SUCCESS_URL ||
   (SITE_URL
-    ? `${SITE_URL.replace(/\/$/, "")}/pricing?status=success&sid={CHECKOUT_SESSION_ID}`
-    : `http://localhost:5173/pricing?status=success&sid={CHECKOUT_SESSION_ID}`);
+    ? `${SITE_URL}/pricing?status=success&sid={CHECKOUT_SESSION_ID}`
+    : "http://localhost:5173/pricing?status=success&sid={CHECKOUT_SESSION_ID}");
 
 const cancelUrl =
   SCVPN_CANCEL_URL ||
   (SITE_URL
-    ? `${SITE_URL.replace(/\/$/, "")}/pricing?status=cancel`
-    : `http://localhost:5173/pricing?status=cancel`);
+    ? `${SITE_URL}/pricing?status=cancel`
+    : "http://localhost:5173/pricing?status=cancel");
 
-// ---------- create app (MUST be before using app.*) ----------
-const app = express();
-
-// ---------- CORS (manual, before JSON parser) ----------
-const rawAllow = (ALLOWED_ORIGINS || "")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
-
-const defaults = [
-  SITE_URL,
-  "https://www.sacvpn.com",
-  "https://sacvpn.com",
-  "http://localhost:5173",
-  "http://localhost:3000",
-].filter(Boolean);
-
-const ALLOW_SET = new Set([...rawAllow, ...defaults]);
-
-// Handle CORS + preflight for everything EXCEPT the Stripe webhook (raw body)
-app.use((req, res, next) => {
-  if (req.path === "/api/stripe/webhook") return next();
-
-  const origin = req.headers.origin;
-  const allowHeaders = "Content-Type, Authorization, Stripe-Signature";
-  const allowMethods = "GET,POST,OPTIONS";
-
-  // If no Origin (server-to-server, curl), just allow through
-  if (!origin) return next();
-
-  if (ALLOW_SET.has(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Headers", allowHeaders);
-    res.setHeader("Access-Control-Allow-Methods", allowMethods);
-
-    if (req.method === "OPTIONS") {
-      return res.sendStatus(204);
-    }
-    return next();
-  }
-
-  // Not allowed
-  if (req.method === "OPTIONS") {
-    // Still answer the preflight so the browser stops retrying forever
-    res.setHeader("Access-Control-Allow-Origin", "null");
-    res.setHeader("Vary", "Origin");
-    return res.sendStatus(403);
-  }
-
-  return res.status(403).json({
-    error: "CORS blocked",
-    origin,
-    allowed_origins: Array.from(ALLOW_SET),
-  });
-});
-
-// ---------- Stripe webhook (raw body) ----------
+/* ========= WEBHOOK (raw body) ========= */
 app.post(
   "/api/stripe/webhook",
   express.raw({ type: "application/json" }),
@@ -121,17 +112,9 @@ app.post(
       console.error("[webhook] Stripe not configured");
       return res.status(500).send("Stripe not configured");
     }
-
     const sig = req.headers["stripe-signature"];
-    let event;
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
-    } catch (err) {
-      console.error("[webhook] signature verify failed:", err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    try {
+      const event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
       switch (event.type) {
         case "checkout.session.completed":
           console.log("[webhook] checkout.session.completed");
@@ -146,25 +129,16 @@ app.post(
       }
       res.json({ received: true });
     } catch (err) {
-      console.error("[webhook] handler error:", err);
-      res.status(500).send("Webhook handler error");
+      console.error("[webhook] signature error:", err.message);
+      res.status(400).send(`Webhook Error: ${err.message}`);
     }
   }
 );
 
-// ---------- JSON body for the rest ----------
+/* ========= JSON BODY FOR OTHER /api ROUTES ========= */
 app.use("/api", express.json());
 
-// ---------- ROUTES ----------
-app.get("/api/healthz", (_req, res) => {
-  res.json({
-    ok: true,
-    uptime: process.uptime(),
-    hasStripe: !!stripe,
-    hasSupabase: !!supabase,
-  });
-});
-
+/* ========= ROUTES ========= */
 app.post("/api/checkout", async (req, res) => {
   try {
     if (!stripe) return res.status(500).json({ error: "Stripe not configured" });
@@ -188,6 +162,7 @@ app.post("/api/checkout", async (req, res) => {
   }
 });
 
+// Example: download a WireGuard config (optional)
 app.get("/api/device/:id/config", async (req, res) => {
   try {
     if (!supabase) return res.status(500).send("Supabase not configured");
@@ -199,10 +174,7 @@ app.get("/api/device/:id/config", async (req, res) => {
       .eq("id", id)
       .single();
 
-    if (error) {
-      console.error("[config] supabase error:", error);
-      return res.status(404).send("Device not found");
-    }
+    if (error) return res.status(404).send("Device not found");
     if (!data?.config_text) return res.status(404).send("No config available");
 
     const filename = `wg-${(data.name || id).toString().replace(/[^a-zA-Z0-9_-]/g, "")}.conf`;
@@ -215,48 +187,14 @@ app.get("/api/device/:id/config", async (req, res) => {
   }
 });
 
-const adminDeviceHandler = async (req, res) => {
-  try {
-    if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
-
-    const { action, deviceId } = req.body || {};
-    if (!action || !deviceId) return res.status(400).json({ error: "Missing action or deviceId" });
-
-    let status;
-    if (action === "activate") status = "active";
-    else if (action === "suspend") status = "suspended";
-    else if (action === "revoke") status = "revoked";
-    else return res.status(400).json({ error: `Unknown action: ${action}` });
-
-    const { data, error } = await supabase
-      .from("devices")
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", deviceId)
-      .select("*")
-      .maybeSingle();
-
-    if (error) {
-      console.error("[admin-device] supabase error:", error);
-      return res.status(500).json({ error: "Failed to update device" });
-    }
-    if (!data) return res.status(404).json({ error: "Device not found" });
-
-    res.json({ ok: true, device: data });
-  } catch (err) {
-    console.error("[admin-device] error:", err);
-    res.status(500).json({ error: "Admin action failed" });
-  }
-};
-app.post("/api/admin/device", adminDeviceHandler);
-app.post("/api/admin-device", adminDeviceHandler);
-
-// ---------- errors ----------
+/* ========= ERRORS ========= */
 app.use((err, _req, res, _next) => {
   console.error("[unhandled]", err);
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-// ---------- start ----------
+/* ========= START ========= */
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`[scvpn-api] listening on :${PORT}`);
+  console.log("Allowed origins:", Array.from(ALLOW_SET));
 });
