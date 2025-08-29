@@ -45,12 +45,12 @@ const supabase =
     : null;
 
     // --- Hard CORS shim (before any routes) ---
-const ALLOW = new Set([
-  "https://www.sacvpn.com",
-  "https://sacvpn.com",
-  "https://scvpn-5r0v1e6d2-kstephens0331s-projects.vercel.app",
-  "http://localhost:5173",
-]);
+const ALLOW = new Set(
+  (ALLOWED_ORIGINS || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean)
+);
 
 app.use((req, res, next) => {
   // only protect API routes; static or other routes unaffected
