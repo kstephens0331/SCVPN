@@ -1,135 +1,231 @@
-// server.js (Fastify)
+// server.js (Fastify v5) — copy/paste ready
+
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
+// ── Env ────────────────────────────────────────────────────────────────────────
 const {
   PORT = 8000,
-  NODE_ENV = "production",
-  SITE_URL = "https://www.sacvpn.com",
+    NODE_ENV = "production",
+      SITE_URL = "https://www.sacvpn.com",
 
-  ALLOWED_ORIGINS = "https://www.sacvpn.com,https://sacvpn.com,http://localhost:5173",
+        // Comma-separated list of allowed origins
+          ALLOWED_ORIGINS = "https://www.sacvpn.com,https://sacvpn.com,http://localhost:5173",
 
-  STRIPE_SECRET_KEY,
-  STRIPE_PRICE_PERSONAL,
-  STRIPE_PRICE_GAMING,
-  STRIPE_PRICE_BUSINESS10,
-  STRIPE_PRICE_BUSINESS50,
-  STRIPE_PRICE_BUSINESS250,
+            // Stripe (required for /api/checkout)
+              STRIPE_SECRET_KEY,
+                STRIPE_PRICE_PERSONAL,
+                  STRIPE_PRICE_GAMING,
+                    STRIPE_PRICE_BUSINESS10,
+                      STRIPE_PRICE_BUSINESS50,
+                        STRIPE_PRICE_BUSINESS250,
 
-  SCVPN_SUPABASE_URL,
-  SCVPN_SUPABASE_SERVICE_KEY,
-} = process.env;
+                          // Supabase (service role key required for server-side mutations)
+                            SCVPN_SUPABASE_URL,
+                              SCVPN_SUPABASE_SERVICE_KEY,
+                              } = process.env;
 
-const app = Fastify({ logger: true });
+                              // Precompute allow set (used by CORS + manual preflight)
+                              const ALLOW = new Set(
+                                (ALLOWED_ORIGINS || "")
+                                    .split(",")
+                                        .map((s) => s.trim())
+                                            .filter(Boolean)
+                                            );
 
-await app.register(cors, {
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-    const allow = new Set(ALLOWED_ORIGINS.split(",").map(s => s.trim()).filter(Boolean));
-    cb(null, allow.has(origin));
-  },
-  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization","x-admin-email"],
-  // credentials: true, // only if using cookies across sites
-});
+                                            // ── App ───────────────────────────────────────────────────────────────────────
+                                            const app = Fastify({ logger: true });
 
-const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
-const supabase = (SCVPN_SUPABASE_URL && SCVPN_SUPABASE_SERVICE_KEY)
-  ? createClient(SCVPN_SUPABASE_URL, SCVPN_SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
-  : null;
+                                            // CORS: answers preflight automatically and adds ACAO on real requests
+                                            await app.register(cors, {
+                                              strictPreflight: false,
+                                                preflightContinue: false,
+                                                  origin: (origin, cb) => {
+                                                      if (!origin) return cb(null, true); // same-origin / curl / server-to-server
+                                                          cb(null, ALLOW.has(origin));
+                                                            },
+                                                              methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+                                                                allowedHeaders: ["Content-Type", "Authorization", "x-admin-email"],
+                                                                  // credentials: true, // only if you use cookies across sites
+                                                                  });
 
-const PRICE_MAP = {
-  personal: STRIPE_PRICE_PERSONAL,
-  gaming: STRIPE_PRICE_GAMING,
-  business10: STRIPE_PRICE_BUSINESS10,
-  business50: STRIPE_PRICE_BUSINESS50,
-  business250: STRIPE_PRICE_BUSINESS250,
-};
+                                                                  // Belt-and-suspenders: explicit OPTIONS responder for any /api/*
+                                                                  // Ensures a clean 204 even if something upstream gets picky.
+                                                                  app.options("/api/*", async (req, reply) => {
+                                                                    const o = req.headers.origin;
+                                                                      if (o && ALLOW.has(o)) {
+                                                                          reply.header("Access-Control-Allow-Origin", o);
+                                                                              reply.header("Vary", "Origin");
+                                                                                }
+                                                                                  reply
+                                                                                      .header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+                                                                                          .header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-email")
+                                                                                              .status(204)
+                                                                                                  .send();
+                                                                                                  });
 
-app.get("/api/healthz", async () => ({ ok: true, env: NODE_ENV, ts: new Date().toISOString() }));
+                                                                                                  // Minimal request log to help when you’re on mobile
+                                                                                                  app.addHook("onRequest", async (req, _res) => {
+                                                                                                    const o = req.headers.origin || "-";
+                                                                                                      req.log.info({ o, m: req.method, p: req.url }, "api hit");
+                                                                                                      });
 
-app.post("/api/checkout", async (req, reply) => {
-  try {
-    if (!stripe) return reply.code(500).send({ error: "server not configured (stripe)" });
-    const { plan, plan_code, account_type, quantity = 1, customer_email } = req.body || {};
-    const code = plan_code || plan;
-    const price = PRICE_MAP[code];
-    if (!price) return reply.code(400).send({ error: "Unknown plan_code" });
+                                                                                                      // ── Clients ───────────────────────────────────────────────────────────────────
+                                                                                                      const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
+                                                                                                      const supabase =
+                                                                                                        SCVPN_SUPABASE_URL && SCVPN_SUPABASE_SERVICE_KEY
+                                                                                                            ? createClient(SCVPN_SUPABASE_URL, SCVPN_SUPABASE_SERVICE_KEY, {
+                                                                                                                    auth: { persistSession: false },
+                                                                                                                          })
+                                                                                                                              : null;
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [{ price, quantity }],
-      success_url: `${SITE_URL}/post-checkout?status=success&sid={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${SITE_URL}/pricing?status=cancel`,
-      customer_email: customer_email || undefined,
-      allow_promotion_codes: true,
-      metadata: { plan_code: code, account_type: account_type || "personal" },
-    });
-    return { url: session.url };
-  } catch (err) {
-    req.log.error({ err }, "[checkout] error");
-    return reply.code(500).send({ error: "checkout failed" });
-  }
-});
+                                                                                                                              // ── Helpers ───────────────────────────────────────────────────────────────────
+                                                                                                                              const PRICE_MAP = {
+                                                                                                                                personal: STRIPE_PRICE_PERSONAL,
+                                                                                                                                  gaming: STRIPE_PRICE_GAMING,
+                                                                                                                                    business10: STRIPE_PRICE_BUSINESS10,
+                                                                                                                                      business50: STRIPE_PRICE_BUSINESS50,
+                                                                                                                                        business250: STRIPE_PRICE_BUSINESS250,
+                                                                                                                                        };
 
-app.get("/api/device/:id/config", async (req, reply) => {
-  try {
-    if (!supabase) return reply.code(500).send("server not configured (supabase)");
-    const id = req.params.id;
-    const { data, error } = await supabase
-      .from("device_configs").select("config_text, filename")
-      .eq("device_id", id).maybeSingle();
-    if (error) return reply.code(500).send("db error");
-    if (!data) return reply.code(404).send("not found");
+                                                                                                                                        function requireStripe(reply) {
+                                                                                                                                          if (!stripe) {
+                                                                                                                                              reply.code(500).send({ error: "server not configured (stripe)" });
+                                                                                                                                                  return false;
+                                                                                                                                                    }
+                                                                                                                                                      return true;
+                                                                                                                                                      }
 
-    reply.header("Content-Type", "text/plain; charset=utf-8");
-    reply.header("Content-Disposition", `attachment; filename="${data.filename || `device-${id}.conf`}"`);
-    return data.config_text || "";
-  } catch (err) {
-    req.log.error({ err }, "[device config] error");
-    return reply.code(500).send("failed");
-  }
-});
+                                                                                                                                                      function requireSupabase(reply) {
+                                                                                                                                                        if (!supabase) {
+                                                                                                                                                            reply.code(500).send({ error: "server not configured (supabase)" });
+                                                                                                                                                                return false;
+                                                                                                                                                                  }
+                                                                                                                                                                    return true;
+                                                                                                                                                                    }
 
-app.post("/api/admin-device", async (req, reply) => {
-  try {
-    if (!supabase) return reply.code(500).send({ error: "server not configured (supabase)" });
-    const adminEmail = req.headers["x-admin-email"];
-    if (!adminEmail) return reply.code(401).send({ error: "missing admin email" });
+                                                                                                                                                                    // ── Health/Echo ───────────────────────────────────────────────────────────────
+                                                                                                                                                                    app.get("/api/healthz", async () => ({
+                                                                                                                                                                      ok: true,
+                                                                                                                                                                        env: NODE_ENV,
+                                                                                                                                                                          ts: new Date().toISOString(),
+                                                                                                                                                                          }));
 
-    const { action, deviceId } = req.body || {};
-    if (!action || !deviceId) return reply.code(400).send({ error: "missing action/deviceId" });
+                                                                                                                                                                          app.all("/api/echo", async (req) => ({
+                                                                                                                                                                            ok: true,
+                                                                                                                                                                              method: req.method,
+                                                                                                                                                                                headers: req.headers,
+                                                                                                                                                                                }));
 
-    const { data: adminRow } = await supabase.from("profiles")
-      .select("email,role").eq("email", adminEmail).maybeSingle();
-    const role = adminRow?.role || "user";
-    if (!["owner","admin"].includes(role)) return reply.code(403).send({ error: "forbidden" });
+                                                                                                                                                                                // ── Stripe Checkout (subscriptions) ───────────────────────────────────────────
+                                                                                                                                                                                app.post("/api/checkout", async (req, reply) => {
+                                                                                                                                                                                  try {
+                                                                                                                                                                                      if (!requireStripe(reply)) return;
 
-    if (action === "activate" || action === "suspend") {
-      const is_active = action === "activate";
-      const { error } = await supabase.from("devices").update({ is_active }).eq("id", deviceId);
-      if (error) throw error;
-      return { ok: true };
-    }
+                                                                                                                                                                                          const { plan, plan_code, account_type, quantity = 1, customer_email } = req.body || {};
+                                                                                                                                                                                              const code = plan_code || plan; // expect "personal" | "gaming" | "business10" | ...
+                                                                                                                                                                                                  const price = PRICE_MAP[code];
 
-    if (action === "revoke_keys") {
-      const { error: e1 } = await supabase.from("device_keys").delete().eq("device_id", deviceId);
-      if (e1) throw e1;
-      const { error: e2 } = await supabase.from("devices").update({ is_active: false }).eq("id", deviceId);
-      if (e2) throw e2;
-      return { ok: true };
-    }
+                                                                                                                                                                                                      if (!code || !price) {
+                                                                                                                                                                                                            req.log.warn({ code, PRICE_MAP }, "unknown plan_code");
+                                                                                                                                                                                                                  return reply.code(400).send({ error: "Unknown plan_code" });
+                                                                                                                                                                                                                      }
 
-    return reply.code(400).send({ error: "unknown action" });
-  } catch (err) {
-    req.log.error({ err }, "[admin-device] error");
-    return reply.code(500).send({ error: "failed" });
-  }
-});
+                                                                                                                                                                                                                          const session = await stripe.checkout.sessions.create({
+                                                                                                                                                                                                                                mode: "subscription",
+                                                                                                                                                                                                                                      line_items: [{ price, quantity }],
+                                                                                                                                                                                                                                            success_url: `${SITE_URL}/post-checkout?status=success&sid={CHECKOUT_SESSION_ID}`,
+                                                                                                                                                                                                                                                  cancel_url: `${SITE_URL}/pricing?status=cancel`,
+                                                                                                                                                                                                                                                        customer_email: customer_email || undefined,
+                                                                                                                                                                                                                                                              allow_promotion_codes: true,
+                                                                                                                                                                                                                                                                    metadata: { plan_code: code, account_type: account_type || "personal" },
+                                                                                                                                                                                                                                                                        });
 
-// test helper
-app.all("/api/echo", async (req) => ({ ok: true, method: req.method, headers: req.headers }));
+                                                                                                                                                                                                                                                                            return { url: session.url };
+                                                                                                                                                                                                                                                                              } catch (err) {
+                                                                                                                                                                                                                                                                                  req.log.error({ err }, "[checkout] error");
+                                                                                                                                                                                                                                                                                      return reply.code(500).send({ error: "checkout failed" });
+                                                                                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                                                                        });
 
-app.listen({ port: Number(PORT), host: "0.0.0.0" });
+                                                                                                                                                                                                                                                                                        // ── Device config download (optional; keep if you use it) ─────────────────────
+                                                                                                                                                                                                                                                                                        app.get("/api/device/:id/config", async (req, reply) => {
+                                                                                                                                                                                                                                                                                          try {
+                                                                                                                                                                                                                                                                                              if (!requireSupabase(reply)) return;
+                                                                                                                                                                                                                                                                                                  const id = req.params.id;
+
+                                                                                                                                                                                                                                                                                                      const { data, error } = await supabase
+                                                                                                                                                                                                                                                                                                            .from("device_configs")
+                                                                                                                                                                                                                                                                                                                  .select("config_text, filename")
+                                                                                                                                                                                                                                                                                                                        .eq("device_id", id)
+                                                                                                                                                                                                                                                                                                                              .maybeSingle();
+
+                                                                                                                                                                                                                                                                                                                                  if (error) {
+                                                                                                                                                                                                                                                                                                                                        req.log.error({ error }, "[device config] supabase error");
+                                                                                                                                                                                                                                                                                                                                              return reply.code(500).send("db error");
+                                                                                                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                                                                                                      if (!data) return reply.code(404).send("not found");
+
+                                                                                                                                                                                                                                                                                                                                                          reply.header("Content-Type", "text/plain; charset=utf-8");
+                                                                                                                                                                                                                                                                                                                                                              reply.header(
+                                                                                                                                                                                                                                                                                                                                                                    "Content-Disposition",
+                                                                                                                                                                                                                                                                                                                                                                          `attachment; filename="${data.filename || `device-${id}.conf`}"`
+                                                                                                                                                                                                                                                                                                                                                                              );
+                                                                                                                                                                                                                                                                                                                                                                                  return reply.send(data.config_text || "");
+                                                                                                                                                                                                                                                                                                                                                                                    } catch (err) {
+                                                                                                                                                                                                                                                                                                                                                                                        req.log.error({ err }, "[device config] error");
+                                                                                                                                                                                                                                                                                                                                                                                            return reply.code(500).send("failed");
+                                                                                                                                                                                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                                                                                                                                                                                              });
+
+                                                                                                                                                                                                                                                                                                                                                                                              // ── Admin device actions (optional; keep if you use it) ───────────────────────
+                                                                                                                                                                                                                                                                                                                                                                                              app.post("/api/admin-device", async (req, reply) => {
+                                                                                                                                                                                                                                                                                                                                                                                                try {
+                                                                                                                                                                                                                                                                                                                                                                                                    if (!requireSupabase(reply)) return;
+                                                                                                                                                                                                                                                                                                                                                                                                        const adminEmail = req.headers["x-admin-email"];
+                                                                                                                                                                                                                                                                                                                                                                                                            if (!adminEmail) return reply.code(401).send({ error: "missing admin email" });
+
+                                                                                                                                                                                                                                                                                                                                                                                                                const { action, deviceId } = req.body || {};
+                                                                                                                                                                                                                                                                                                                                                                                                                    if (!action || !deviceId) return reply.code(400).send({ error: "missing action/deviceId" });
+
+                                                                                                                                                                                                                                                                                                                                                                                                                        const { data: adminRow } = await supabase
+                                                                                                                                                                                                                                                                                                                                                                                                                              .from("profiles")
+                                                                                                                                                                                                                                                                                                                                                                                                                                    .select("email,role")
+                                                                                                                                                                                                                                                                                                                                                                                                                                          .eq("email", adminEmail)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                .maybeSingle();
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    const role = adminRow?.role || "user";
+                                                                                                                                                                                                                                                                                                                                                                                                                                                        if (!["owner", "admin"].includes(role)) return reply.code(403).send({ error: "forbidden" });
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            if (action === "activate" || action === "suspend") {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                  const is_active = action === "activate";
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        const { error } = await supabase.from("devices").update({ is_active }).eq("id", deviceId);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                              if (error) throw error;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    return { ok: true };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if (action === "revoke_keys") {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  const { error: e1 } = await supabase.from("device_keys").delete().eq("device_id", deviceId);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        if (e1) throw e1;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              const { error: e2 } = await supabase.from("devices").update({ is_active: false }).eq("id", deviceId);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    if (e2) throw e2;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          return { ok: true };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              }
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  return reply.code(400).send({ error: "unknown action" });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    } catch (err) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        req.log.error({ err }, "[admin-device] error");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            return reply.code(500).send({ error: "failed" });
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              });
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              // ── Start ─────────────────────────────────────────────────────────────────────
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              app
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                .listen({ port: Number(PORT), host: "0.0.0.0" })
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  .then(() => app.log.info(`✅ API running on :${PORT}`))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    .catch((err) => {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        app.log.error(err);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            process.exit(1);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              });
