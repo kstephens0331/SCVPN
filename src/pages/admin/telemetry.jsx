@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 export default function Telemetry(){
   const [rows, setRows] = useState([])
@@ -24,7 +24,7 @@ export default function Telemetry(){
           </tr>
         </thead>
         <tbody>
-          {rows.map(r=> (
+          {(rows ?? []).map(r=> (
             <tr key={r.device_id} className="border-b">
               <td className="py-2 pr-3">{r.device_id}</td>
               <td className="py-2 pr-3">{r.is_connected?'Yes':'No'}</td>
@@ -32,8 +32,8 @@ export default function Telemetry(){
               <td className="py-2 pr-3">{r.tx_packets}</td>
               <td className="py-2 pr-3">{r.rx_bytes}</td>
               <td className="py-2 pr-3">{r.tx_bytes}</td>
-              <td className="py-2 pr-3">{r.latency_ms ?? "â€”"}</td>
-              <td className="py-2 pr-3">{r.endpoint ?? "â€”"}</td>
+              <td className="py-2 pr-3">{r.latency_ms ?? "—"}</td>
+              <td className="py-2 pr-3">{r.endpoint ?? "—"}</td>
               <td className="py-2 pr-3">{new Date(r.ts).toLocaleString()}</td>
             </tr>
           ))}

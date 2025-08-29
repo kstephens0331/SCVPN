@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 
@@ -52,7 +52,7 @@ export default function BusinessAccount(){
   })(); },[orgId]);
 
   const planLabel = useMemo(()=>{
-    if (!org?.plan) return "â€”";
+    if (!org?.plan) return "—";
     const map = { free:"Free", pro:"Pro", enterprise:"Enterprise", personal:"Personal", gaming:"Gaming", business10:"Business 10", business50:"Business 50", business250:"Business 250" };
     return map[org.plan] || org.plan;
   },[org]);
@@ -63,7 +63,7 @@ export default function BusinessAccount(){
         <div>
           <label className="text-sm text-lime-400/90">Organization</label>
           <select value={orgId} onChange={e=>setOrgId(e.target.value)} className="ml-2 rounded px-3 py-2 bg-black/40 ring-1 ring-gray-800">
-            {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            {(orgs ?? []).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         </div>
       </div>
@@ -93,7 +93,7 @@ export default function BusinessAccount(){
               </div>
               <div className="rounded-lg bg-black/30 p-4 ring-1 ring-gray-800">
                 <div className="text-xs text-gray-400">Created</div>
-                <div className="text-base">{org.created_at ? new Date(org.created_at).toLocaleDateString() : "â€”"}</div>
+                <div className="text-base">{org.created_at ? new Date(org.created_at).toLocaleDateString() : "—"}</div>
               </div>
             </div>
 

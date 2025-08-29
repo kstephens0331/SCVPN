@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase"; // adjust if your client is elsewhere
 const PLATFORMS = ["ios","android","macos","windows","linux","router","other"];
 
@@ -142,7 +142,7 @@ export default function BusinessDevices(){
         <div>
           <label className="text-sm text-lime-400/90">Organization</label>
           <select value={orgId} onChange={e=>setOrgId(e.target.value)} className="ml-2 rounded px-3 py-2 bg-black/40 ring-1 ring-gray-800">
-            {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            {(orgs ?? []).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         </div>
 
@@ -186,12 +186,12 @@ export default function BusinessDevices(){
             </tr>
           </thead>
           <tbody>
-            {rows.map(d=>(
+            {(rows ?? []).map(d=>(
               <tr key={d.id} className="border-b border-gray-800">
                 <td className="py-2 pr-3">{d.name}</td>
                 <td className="py-2 pr-3">{d.platform}</td>
                 <td className="py-2 pr-3">{d.is_active ? "Yes":"No"}</td>
-                <td className="py-2 pr-3">{conn[d.id] ? "✔" : "—"}</td>
+                <td className="py-2 pr-3">{conn[d.id] ? "?" : "�"}</td>
                 <td className="py-2 pr-3 flex gap-3">
                   <a className="underline" href={`/api/device/${d.id}/config`} target="_blank" rel="noreferrer">Config</a>
                   <button className="underline" onClick={()=>toggle(d.id, d.is_active)}>{d.is_active? "Suspend":"Activate"}</button>

@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
 export default function BusinessBilling(){
@@ -28,20 +28,20 @@ export default function BusinessBilling(){
       <div>
         <label className="text-sm text-lime-400/90">Organization</label>
         <select value={orgId} onChange={e=>setOrgId(e.target.value)} className="ml-2 rounded px-3 py-2 bg-black/40 ring-1 ring-gray-800">
-          {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+          {(orgs ?? []).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       </div>
       <div className="rounded-2xl bg-gray-900 ring-1 ring-gray-800 p-5">
         <div className="text-lime-400 font-semibold">Current plan</div>
-        <div className="text-lime-300 text-sm">{sub ? `${sub.plan} Â· ${sub.status}` : "â€”"}</div>
+        <div className="text-lime-300 text-sm">{sub ? `${sub.plan} · ${sub.status}` : "—"}</div>
         <a href="/api/billing/manage" className="inline-block mt-3 rounded px-3 py-2 bg-lime-400 text-black font-semibold">Manage Billing</a>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead><tr className="text-left border-b border-gray-800 text-lime-400/90"><th className="py-2 pr-3">Period</th><th className="py-2 pr-3">Amount</th><th className="py-2 pr-3">Status</th></tr></thead>
-          <tbody>{invoices.map(iv=>(
+          <tbody>{(invoices ?? []).map(iv=>(
             <tr key={iv.id} className="border-b border-gray-800">
-              <td className="py-2 pr-3">{new Date(iv.period_start).toLocaleDateString()} â€“ {new Date(iv.period_end).toLocaleDateString()}</td>
+              <td className="py-2 pr-3">{new Date(iv.period_start).toLocaleDateString()} – {new Date(iv.period_end).toLocaleDateString()}</td>
               <td className="py-2 pr-3">{(iv.amount_cents/100).toFixed(2)} {iv.currency||"USD"}</td>
               <td className="py-2 pr-3">{iv.status}</td>
             </tr>

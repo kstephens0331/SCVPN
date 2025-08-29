@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 
 // NOTE: call Edge Function via full Supabase URL (no proxy needed)
@@ -30,7 +30,7 @@ export default function Devices(){
           </tr>
         </thead>
         <tbody>
-          {rows.map(d=> (
+          {(rows ?? []).map(d=> (
             <tr key={d.id} className="border-b">
               <td className="py-2 pr-3">{d.name}</td>
               <td className="py-2 pr-3">{d.platform}</td>

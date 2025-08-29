@@ -1,4 +1,4 @@
-Ôªøimport { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts"
 
@@ -144,7 +144,7 @@ export default function Analytics(){
     <div className="space-y-8">
       {/* Top KPIs */}
       <div className="grid gap-4 lg:grid-cols-4 sm:grid-cols-2">
-        {totals.map(t=> <Kpi key={t.label} label={t.label} value={t.val}/>)}
+        {(totals ?? []).map(t=> <Kpi key={t.label} label={t.label} value={t.val}/>)}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3 sm:grid-cols-1">
@@ -200,7 +200,7 @@ export default function Analytics(){
               <YAxis tick={{ fill:"#84cc16" }} />
               <Tooltip contentStyle={{ background:"#000", border:"1px solid #84cc16", color:"#84cc16" }}/>
               <Legend />
-              {revPlanStack.keys.map((k, idx)=>(
+              {(revPlanStack.keys ?? []).map((k, idx)=>(
                 <Bar key={k} dataKey={k} stackId="a" fill="#84cc16" opacity={0.4 + (idx % 3)*0.2}/>
               ))}
             </BarChart>
@@ -238,7 +238,7 @@ export default function Analytics(){
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-xs text-lime-400/80 mt-2">‚ÄúVisits‚Äù will show once you insert rows into <code>web_traffic_daily</code>.</p>
+        <p className="text-xs text-lime-400/80 mt-2">ìVisitsî will show once you insert rows into <code>web_traffic_daily</code>.</p>
       </section>
 
       {/* Cohort retention heatmap */}
@@ -249,7 +249,7 @@ export default function Analytics(){
             <div className="grid grid-cols-13 gap-2">
               <div></div>
               {Array.from({length:12}).map((_,i)=><div key={i} className="text-xs text-lime-400 text-center">+{i}</div>)}
-              {cohortGrid.rows.map(([label,row])=>(
+              {(cohortGrid.rows ?? []).map(([label,row])=>(
                 <div key={label} className="contents">
                   <div className="text-xs text-lime-400 flex items-center">{label}</div>
                   {Array.from({length:12}).map((_,i)=> <HeatCell key={i} pct={row[i]} />)}
@@ -262,7 +262,7 @@ export default function Analytics(){
 
       {/* Subs counters */}
       <div className="grid gap-4 lg:grid-cols-3 sm:grid-cols-2">
-        {subsCounters.map(s=> <Kpi key={s.label} label={s.label} value={s.val}/>)}
+        {(subsCounters ?? []).map(s=> <Kpi key={s.label} label={s.label} value={s.val}/>)}
       </div>
     </div>
   )

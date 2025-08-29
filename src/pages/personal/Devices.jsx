@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
 const PLATFORMS = ["ios","android","macos","windows","linux","router","other"];
@@ -128,7 +128,7 @@ export default function PersonalDevices(){  async function requestKey(id){
             </tr>
           </thead>
           <tbody>
-            {rows.map(d=>(
+            {(rows ?? []).map(d=>(
               <tr key={d.id} className="border-b border-gray-800">
                 <td className="py-2 pr-3">
                   <input
@@ -142,7 +142,7 @@ export default function PersonalDevices(){  async function requestKey(id){
                 </td>
                 <td className="py-2 pr-3">{d.platform}</td>
                 <td className="py-2 pr-3">{d.is_active ? "Yes" : "No"}</td>
-                <td className="py-2 pr-3">{conn[d.id] ? "✔" : "—"}</td>
+                <td className="py-2 pr-3">{conn[d.id] ? "?" : "�"}</td>
                 <td className="py-2 pr-3 flex gap-3">
                   <a className="underline" href={`/api/device/${d.id}/config`} target="_blank" rel="noreferrer">Config</a>
                   <button className="underline" onClick={()=>toggle(d.id, d.is_active)}>{d.is_active? "Suspend" : "Activate"}</button>
