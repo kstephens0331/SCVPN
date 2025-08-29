@@ -2,42 +2,36 @@ import { PLANS } from "../lib/pricing.js";
 import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
-import { planToStripe } from "../utils/planMap.js";
 import { API_BASE } from "../lib/apiBase.js"; // no alias to avoid build issues
 
-async function startCheckout(planId) {
-  const res = await fetch(`${API_BASE}/api/checkout`, {
+const API = import.meta.env.VITE_API_URL;
+
+async function startCheckout(planCode, accountType = "personal", qty = 1) {
+  const res = await fetch(`${API}/api/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ planId }),
+    body: JSON.stringify({
+      plan_code: planCode,            // "personal" | "gaming" | "business10" | ...
+      account_type: accountType,
+      quantity: qty
+    }),
   });
-
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Checkout failed: ${res.status} ${text || ""}`.trim());
+    const msg = await res.text().catch(() => "");
+    throw new Error(`Checkout failed: ${res.status} ${msg}`);
   }
-
-  const data = await res.json();
-  if (!data?.url) throw new Error("No checkout URL returned");
-  window.location.assign(data.url);
+  const out = await res.json();
+  if (!out.url) throw new Error("No checkout URL returned");
+  window.location.href = out.url;     // go to Stripe Checkout
 }
+
 
 function handlePlanClick(e, plan) {
   e.preventDefault();
-  try {
-    const cfg = planToStripe(plan);
-    // Expect cfg like { priceId: 'price_...' } or { planId: '...' }
-    const planId = cfg?.priceId ?? cfg?.planId;
-    if (!planId) {
-      alert("This plan is not configured yet.");
-      return;
-    }
-    startCheckout(planId);
-  } catch (err) {
-    console.error(err);
-    alert("Unable to start checkout");
-  }
+  const accountType = plan.accountType || (plan.business ? "business" : "personal");
+  startCheckout(plan.code, accountType);
 }
+
 
 
 

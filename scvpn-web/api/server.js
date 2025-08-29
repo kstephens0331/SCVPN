@@ -11,7 +11,7 @@ const {
   SITE_URL = "https://www.sacvpn.com",
 
   // Frontend origins allowed to call this API (comma-separated)
-  ALLOWED_ORIGINS = "https://www.sacvpn.com,http://localhost:5173",
+  ALLOWED_ORIGINS = "https://www.sacvpn.com,http://localhost:5173,https://sacvpn.com",
 
   // Stripe
   STRIPE_SECRET_KEY,
