@@ -43,29 +43,23 @@ const ALLOW = new Set(
 
 // ---- Early preflight handler (handles ANY /api/* OPTIONS) ----
 app.addHook("onRequest", async (req, reply) => {
-  // Only guard /api/* paths
   if (!req.url.startsWith("/api/")) return;
-
   const origin = req.headers.origin;
-  const allowOrigin = origin && ALLOW.has(origin) ? origin : undefined;
-
-  // Always reflect allowed origin + vary for cache correctness
-  if (allowOrigin) {
-    reply.header("Access-Control-Allow-Origin", allowOrigin);
+  const allow = new Set((process.env.ALLOWED_ORIGINS || "")
+    .split(",").map(s=>s.trim()).filter(Boolean));
+  if (origin && allow.has(origin)) {
+    reply.header("Access-Control-Allow-Origin", origin);
     reply.header("Vary", "Origin");
   }
-
-  // Short-circuit preflight so Railway never 502s OPTIONS
   if (req.method === "OPTIONS") {
     reply
       .header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
       .header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-email")
-      // .header("Access-Control-Allow-Credentials", "true") // only if sending cookies
-      .code(204)
-      .send();
-    return reply; // stop pipeline
+      .code(204).send();
+    return reply;
   }
 });
+
 
 // ---- Normal CORS for non-OPTIONS requests ----
 await app.register(cors, {
@@ -97,14 +91,10 @@ function requireStripe(reply) {
 }
 
 // ---- Routes ----
-app.get("/api/healthz", async () => ({ ok: true, env: NODE_ENV, ts: new Date().toISOString() }));
+app.get("/api/healthz", async () => ({ ok: true, ts: new Date().toISOString() }));
 
 // Simple echo for smoke tests
-app.all("/api/echo", async (req) => ({
-  ok: true,
-  method: req.method,
-  origin: req.headers.origin || null,
-}));
+app.all("/api/echo", async (req) => ({ ok: true, method: req.method }));
 
 // Stripe Checkout
 app.post("/api/checkout", async (req, reply) => {
@@ -135,11 +125,7 @@ app.post("/api/checkout", async (req, reply) => {
 });
 
 // ---- Start ----
-const port = Number(PORT) || 8080;
-app
-  .listen({ port, host: "0.0.0.0" })
+const port = Number(process.env.PORT || 8080);
+app.listen({ port, host: "0.0.0.0" })
   .then(() => app.log.info(`✅ API listening on 0.0.0.0:${port}`))
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+  .catch((err) => { console.error(err); process.exit(1); });
