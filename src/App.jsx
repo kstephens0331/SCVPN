@@ -34,7 +34,8 @@ import PostCheckout from "./pages/PostCheckout";
 
 export default function App() {
   return (
-    <Routes>`r`n        <Route path="/app" element={<AppLanding />} />
+    <Routes>
+      <Route path="/app" element={<AppLanding />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/pricing" element={<Pricing />} />
