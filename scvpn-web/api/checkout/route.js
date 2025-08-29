@@ -1,16 +1,11 @@
-// pages/api/checkout.js
+// app/api/checkout/route.js
 import Stripe from "stripe";
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-export default async function handler(req, res) {
+export async function POST(req) {
   try {
-    if (req.method !== "POST") {
-      res.setHeader("Allow", "POST");
-      return res.status(405).send("Method Not Allowed");
-    }
-
-    const { plan_code, account_type = "personal", quantity = 1, customer_email } = req.body || {};
+    const body = await req.json();
+    const { plan_code, account_type = "personal", quantity = 1, customer_email } = body || {};
 
     const PRICE_MAP = {
       personal: process.env.STRIPE_PRICE_PERSONAL,
@@ -21,7 +16,7 @@ export default async function handler(req, res) {
     };
 
     const price = PRICE_MAP[plan_code];
-    if (!price) return res.status(400).json({ error: "Unknown plan_code" });
+    if (!price) return Response.json({ error: "Unknown plan_code" }, { status: 400 });
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -33,9 +28,9 @@ export default async function handler(req, res) {
       metadata: { plan_code, account_type },
     });
 
-    return res.status(200).json({ url: session.url });
+    return Response.json({ url: session.url });
   } catch (err) {
     console.error("[checkout] error", err);
-    return res.status(500).json({ error: "checkout failed" });
+    return Response.json({ error: "checkout failed" }, { status: 500 });
   }
 }
