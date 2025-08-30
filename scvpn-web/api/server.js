@@ -36,10 +36,30 @@ const supabase =
 
 // ---- CORS allow-list ----
 const ALLOW = new Set(
-  ALLOWED_ORIGINS.split(",")
-    .map((s) => s.trim())
+  (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map(s => s.trim())
     .filter(Boolean)
 );
+
+function corsHeaders(origin) {
+  const allowOrigin = origin && ALLOW.has(origin) ? origin : null;
+  const h = {
+    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin-email",
+    "Access-Control-Max-Age": "600",
+    "Vary": "Origin",
+  };
+  if (allowOrigin) h["Access-Control-Allow-Origin"] = allowOrigin;
+  return { h, allowOrigin };
+}
+
+app.options("/api/*", async (req, reply) => {
+  const { h, allowOrigin } = corsHeaders(req.headers.origin);
+  // Log once so we can see mismatches in Railway logs
+  app.log.info({ origin: req.headers.origin, allow: [...ALLOW], matched: !!allowOrigin }, "preflight");
+  reply.headers(h).code(204).send();
+});
 
 // ---- Early preflight handler (handles ANY /api/* OPTIONS) ----
 app.addHook("onRequest", async (req, reply) => {
@@ -64,9 +84,8 @@ app.addHook("onRequest", async (req, reply) => {
 // ---- Normal CORS for non-OPTIONS requests ----
 await app.register(cors, {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // same-origin or curl
-    if (ALLOW.has(origin)) return cb(null, true);
-    cb(null, false);
+    if (!origin) return cb(null, true);           // same-origin / curl
+    return cb(null, ALLOW.has(origin));           // reflect allowed origins only
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-admin-email"],
@@ -128,4 +147,4 @@ app.post("/api/checkout", async (req, reply) => {
 const port = Number(process.env.PORT || 8080);
 app.listen({ port, host: "0.0.0.0" })
   .then(() => app.log.info(`✅ API listening on 0.0.0.0:${port}`))
-  .catch((err) => { console.error(err); process.exit(1); });
+  .catch(err => { console.error(err); process.exit(1); });
