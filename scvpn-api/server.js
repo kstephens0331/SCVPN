@@ -84,12 +84,16 @@ app.addHook("onRequest", async (req, reply) => {
 // ---- Normal CORS for non-OPTIONS requests ----
 await app.register(cors, {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true);           // same-origin / curl
-    return cb(null, ALLOW.has(origin));           // reflect allowed origins only
+    // allow same-origin/no origin (curl), and reflect only approved origins
+    if (!origin) return cb(null, true);
+    const allow = new Set((process.env.ALLOWED_ORIGINS || "")
+      .split(",").map(s => s.trim()).filter(Boolean));
+    cb(null, allow.has(origin));
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-admin-email"],
-  credentials: false,
+  credentials: false,       // no cookies
+  preflight: true           // <-- fastify-cors will answer OPTIONS
 });
 
 // ---- Helpers ----
