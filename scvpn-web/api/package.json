@@ -1,21 +1,20 @@
 {
-    "name": "scvpn-api",
-    "version": "1.0.0",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "start": "node server.js",
-        "dev": "nodemon server.js"
-    },
-    "dependencies": {
-        "@fastify/cors": "^10.1.0",
-        "@supabase/supabase-js": "^2.45.0",
-        "dotenv": "^16.6.1",
-        "fastify": "^5.5.0",
-        "stripe": "^14.0.0"
-    },
-    "devDependencies": {
-        "nodemon": "^3.1.10"
-    }
+  "name": "scvpn-api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js"
+  },
+  "engines": {
+    "node": ">=20 <21"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@supabase/supabase-js": "^2.56.0",
+    "fastify": "^5.5.0",
+    "stripe": "^18.5.0"
+  }
 }
 
