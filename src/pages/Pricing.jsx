@@ -4,30 +4,35 @@ import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
 // remove: import { planToStripe } from "../utils/planMap.js";
 
-const API = import.meta.env.VITE_API_URL;
+const RAW_API_URL = import.meta.env.VITE_API_URL;
+const API_URL = (RAW_API_URL || "").replace(/\/$/, "");
 
-if (!API) {
+if (!API_URL) {
   console.error("VITE_API_URL is not set — cannot call /api/checkout");
 }
 
 /** Create Stripe Checkout session on the API and redirect */
-async function startCheckout(planCode, accountType = "personal", qty = 1) {
-  if (!API) throw new Error("Missing VITE_API_URL in frontend env");
+async function startCheckout(planCode, accountType = "personal") {
+  try {
+    const res = await fetch(`${API_URL}/api/checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan_code: planCode, account_type: accountType, quantity: 1 }),
+    });
 
-  const res = await fetch(`${API}/api/checkout`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plan_code: planCode, account_type: accountType, quantity: qty }),
-  });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Checkout failed: ${res.status} ${txt}`);
+    }
 
-  if (!res.ok) {
-    const msg = await res.text().catch(() => "");
-    throw new Error(`Checkout failed: ${res.status} ${msg}`);
+    const { url } = await res.json();
+    if (!url) throw new Error("Missing 'url' in API response");
+
+    window.location.assign(url);
+  } catch (err) {
+    console.error("[pricing] checkout error", err);
+    alert("We couldn’t start checkout. Please try again in a moment.");
   }
-
-  const out = await res.json();
-  if (!out.url) throw new Error("No checkout URL returned");
-  window.location.href = out.url; // go to Stripe Checkout
 }
 
 /** Handle clicks: send plan.code (server maps it to Stripe price) */
@@ -122,9 +127,9 @@ function PlanCard({ plan }) {
         ))}
       </ul>
       <div className="mt-6">
-        <Link to="/login" onClick={(e)=>handlePlanClick(e, plan)} className="button-primary w-full text-center">
-          Get {plan.name}
-        </Link>
+        <button type="button" onClick={(e) => handlePlanClick(e, plan)} className="button-primary w-full text-center">
+  Get {plan.name}
+</button>
       </div>
     </div>
   );
