@@ -4,12 +4,8 @@ import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
 // remove: import { planToStripe } from "../utils/planMap.js";
 
-const RAW_API_URL = import.meta.env.VITE_API_URL;
-const API_URL = (RAW_API_URL || "").replace(/\/$/, "");
-
-if (!API_URL) {
-  console.error("VITE_API_URL is not set — cannot call /api/checkout");
-}
+const API_URL = import.meta.env.VITE_API_URL;
+if (!API_URL) console.error("VITE_API_URL is not set — cannot call /api/checkout");
 
 /** Create Stripe Checkout session on the API and redirect */
 async function startCheckout(planCode, accountType = "personal") {
