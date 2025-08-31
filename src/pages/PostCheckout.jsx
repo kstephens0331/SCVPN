@@ -1,6 +1,10 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "../supabaseClient";
+import { PLANS } from "../lib/pricing.js";
 
 export default function PostCheckout(){
   const nav = useNavigate();
@@ -11,7 +15,8 @@ export default function PostCheckout(){
   const [atype, setAtype] = useState("personal");
   const [qty, setQty] = useState(1);
   const [password, setPassword] = useState("");
-  const sessionId = new URLSearchParams(loc.search).get("session_id");
+  const sessionId = qp.get("session_id") || qp.get("sid"); // accept both
+  const qp = new URLSearchParams(loc.search);
 
   useEffect(() => {
     (async () => {
@@ -65,6 +70,23 @@ export default function PostCheckout(){
       <h1 className="text-2xl font-semibold">Create your account</h1>
       <div className="text-sm text-gray-600">
         Plan: <b>{plan || "unknown"}</b> {atype === "business" ? `(seats: ${qty})` : null}
+      </div>
+      +      <div className="text-sm text-gray-600">
+        {(() => {
+          const planName =
+            plan === "personal" ? PLANS.personal.name :
+            plan === "gaming" ? PLANS.gaming.name :
+            plan === "business10" ? PLANS.business10.name :
+            plan === "business50" ? PLANS.business50.name :
+            plan === "business250" ? PLANS.business250.name :
+            "unknown";
+          return (
+            <>
+              Plan: <b>{planName}</b>{" "}
+              {atype === "business" ? `(seats: ${qty})` : null}
+            </>
+          );
+        })()}
       </div>
       <form onSubmit={handleRegister} className="space-y-3">
         <div>
