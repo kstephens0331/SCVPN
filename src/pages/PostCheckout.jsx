@@ -1,9 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "../supabaseClient";
 import { PLANS } from "../lib/pricing.js";
 
 export default function PostCheckout(){
