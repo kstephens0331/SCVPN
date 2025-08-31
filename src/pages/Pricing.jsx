@@ -3,12 +3,15 @@ import { PLANS } from "../lib/pricing.js";
 import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
+import { useState } from "react";
+
 
 // 👇 If your Supabase client file is named differently, adjust this path.
 import { supabase } from "../supabaseClient.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
 if (!API_URL) console.error("VITE_API_URL is not set — cannot call /api/checkout");
+
 
 // Grab the current user email (if signed in) to prefill Stripe Checkout
 async function getUserEmail() {
@@ -124,7 +127,7 @@ export default function Pricing() {
 }
 
 function PlanCard({ plan }) {
-  const [busy, setBusy] = React.useState(false);
+  const [busy, setBusy] = useState(false);
 
   return (
     <div className="card p-6 flex flex-col">
