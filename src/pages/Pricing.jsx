@@ -5,7 +5,7 @@ import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
 
 // 👇 If your Supabase client file is named differently, adjust this path.
-import { supabase } from "../lib/supabaseClient.js";
+import { supabase } from "../supabaseClient.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
 if (!API_URL) console.error("VITE_API_URL is not set — cannot call /api/checkout");
