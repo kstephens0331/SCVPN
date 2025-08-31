@@ -1,12 +1,8 @@
 // src/pages/Pricing.jsx
 import { PLANS } from "../lib/pricing.js";
-import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
 import { useState } from "react";
-
-
-// 👇 If your Supabase client file is named differently, adjust this path.
 import { supabase } from "../supabaseClient.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -35,9 +31,9 @@ async function startCheckout(planCode, accountType = "personal", setBusy) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         plan_code: planCode,
+        plan_name: planName,
         account_type: accountType,
         quantity: 1,
-        // sending email helps Stripe prefill; webhook is what writes to Supabase
         customer_email: customer_email || undefined,
       }),
     });
@@ -63,7 +59,7 @@ async function startCheckout(planCode, accountType = "personal", setBusy) {
 function handlePlanClick(e, plan, setBusy) {
   e.preventDefault();
   const accountType = plan.accountType || (plan.business ? "business" : "personal");
-  startCheckout(plan.code, accountType, setBusy);
+  startCheckout(plan.code, accountType, plan.name, setBusy);
 }
 
 const personalCards = [PLANS.personal, PLANS.gaming];

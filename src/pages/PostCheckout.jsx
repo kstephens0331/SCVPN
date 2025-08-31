@@ -24,7 +24,7 @@ export default function PostCheckout(){
         const out = await res.json();
         if(res.ok){
           setEmail(out.email || "");
-          setPlan(out.plan_code || "");
+          setPlan(out.plan_code || out.plan_code || "");
           setAtype(out.account_type || "personal");
           setQty(Number(out.quantity || 1));
         } else {

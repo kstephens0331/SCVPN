@@ -137,7 +137,7 @@ app.post("/api/checkout", async (req, reply) => {
       cancel_url: `${SITE_URL}/pricing?status=cancel`,
       customer_email: customer_email || undefined,
       allow_promotion_codes: true,
-      metadata: { plan_code, account_type },
+      metadata: { plan_code, account_type, plan_name: plan_name || plan_code },
     });
 
     reply.send({ url: session.url });
