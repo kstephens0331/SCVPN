@@ -28,17 +28,24 @@ const {
 
 // ---- Clients ----
 const app = Fastify({ logger: true });
-const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
+
+// Pin a recent stable API version (optional but helps with consistency)
+const stripe = STRIPE_SECRET_KEY
+  ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" })
+  : null;
+
 const supabase =
   SCVPN_SUPABASE_URL && SCVPN_SUPABASE_SERVICE_KEY
-    ? createClient(SCVPN_SUPABASE_URL, SCVPN_SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
+    ? createClient(SCVPN_SUPABASE_URL, SCVPN_SUPABASE_SERVICE_KEY, {
+        auth: { persistSession: false },
+      })
     : null;
 
 // ---- CORS allow-list ----
 const ALLOW = new Set(
-  (process.env.ALLOWED_ORIGINS || "")
+  (ALLOWED_ORIGINS || "")
     .split(",")
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean)
 );
 
@@ -48,26 +55,27 @@ function corsHeaders(origin) {
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin-email",
     "Access-Control-Max-Age": "600",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
   if (allowOrigin) h["Access-Control-Allow-Origin"] = allowOrigin;
   return { h, allowOrigin };
 }
 
+// Preflight for any /api/* (prevents 502 at the edge)
 app.options("/api/*", async (req, reply) => {
   const { h, allowOrigin } = corsHeaders(req.headers.origin);
-  // Log once so we can see mismatches in Railway logs
-  app.log.info({ origin: req.headers.origin, allow: [...ALLOW], matched: !!allowOrigin }, "preflight");
+  app.log.info(
+    { origin: req.headers.origin, allow: [...ALLOW], matched: !!allowOrigin },
+    "preflight"
+  );
   reply.headers(h).code(204).send();
 });
 
-// ---- Early preflight handler (handles ANY /api/* OPTIONS) ----
+// Early hook to reflect ACAO on real requests too
 app.addHook("onRequest", async (req, reply) => {
   if (!req.url.startsWith("/api/")) return;
   const origin = req.headers.origin;
-  const allow = new Set((process.env.ALLOWED_ORIGINS || "")
-    .split(",").map(s=>s.trim()).filter(Boolean));
-  if (origin && allow.has(origin)) {
+  if (origin && ALLOW.has(origin)) {
     reply.header("Access-Control-Allow-Origin", origin);
     reply.header("Vary", "Origin");
   }
@@ -75,25 +83,22 @@ app.addHook("onRequest", async (req, reply) => {
     reply
       .header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
       .header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-admin-email")
-      .code(204).send();
+      .code(204)
+      .send();
     return reply;
   }
 });
 
-
-// ---- Normal CORS for non-OPTIONS requests ----
+// Normal CORS for non-OPTIONS
 await app.register(cors, {
   origin: (origin, cb) => {
-    // allow same-origin/no origin (curl), and reflect only approved origins
-    if (!origin) return cb(null, true);
-    const allow = new Set((process.env.ALLOWED_ORIGINS || "")
-      .split(",").map(s => s.trim()).filter(Boolean));
-    cb(null, allow.has(origin));
+    if (!origin) return cb(null, true); // same-origin/curl
+    return cb(null, ALLOW.has(origin));
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "x-admin-email"],
-  credentials: false,       // no cookies
-  preflight: true           // <-- fastify-cors will answer OPTIONS
+  credentials: false,
+  preflight: true,
 });
 
 // ---- Helpers ----
@@ -113,8 +118,36 @@ function requireStripe(reply) {
   return true;
 }
 
+// mask helper for logs
+const mask = (v) => (typeof v === "string" ? v.replace(/^(.{6}).+(.{4})$/, "$1…$2") : v);
+
 // ---- Routes ----
-app.get("/api/healthz", async () => ({ ok: true, ts: new Date().toISOString() }));
+app.get("/api/healthz", async () => ({
+  ok: true,
+  ts: new Date().toISOString(),
+  env: NODE_ENV,
+}));
+
+// Config sanity check (SAFE: no secrets leaked)
+app.get("/api/debug/config", async () => {
+  return {
+    ok: true,
+    site_url: SITE_URL,
+    has_stripe_secret: !!STRIPE_SECRET_KEY,
+    stripe_mode: STRIPE_SECRET_KEY?.startsWith("sk_live_")
+      ? "live"
+      : STRIPE_SECRET_KEY?.startsWith("sk_test_")
+      ? "test"
+      : "unknown",
+    prices: {
+      personal: mask(STRIPE_PRICE_PERSONAL || null),
+      gaming: mask(STRIPE_PRICE_GAMING || null),
+      business10: mask(STRIPE_PRICE_BUSINESS10 || null),
+      business50: mask(STRIPE_PRICE_BUSINESS50 || null),
+      business250: mask(STRIPE_PRICE_BUSINESS250 || null),
+    },
+  };
+});
 
 // Simple echo for smoke tests
 app.all("/api/echo", async (req) => ({ ok: true, method: req.method }));
@@ -125,10 +158,34 @@ app.post("/api/checkout", async (req, reply) => {
     if (!requireStripe(reply)) return;
 
     const body = req.body || {};
-    const { plan_code, account_type = "personal", quantity = 1, customer_email } = body;
+    const {
+      plan_code,
+      account_type = "personal",
+      quantity = 1,
+      customer_email,
+    } = body;
+
+    // Log the inputs (safe)
+    req.log.info(
+      { plan_code, account_type, quantity, has_email: !!customer_email },
+      "[checkout] incoming"
+    );
 
     const price = PRICE_MAP[plan_code];
-    if (!price) return reply.code(400).send({ error: "Unknown plan_code" });
+    if (!price) {
+      req.log.warn({ plan_code }, "[checkout] unknown plan_code");
+      return reply.code(400).send({ error: "Unknown plan_code" });
+    }
+
+    // Label used only for metadata / UI
+    const PLAN_LABELS = {
+      personal: "Personal",
+      gaming: "Gaming",
+      business10: "Business 10",
+      business50: "Business 50",
+      business250: "Business 250",
+    };
+    const plan_label = PLAN_LABELS[plan_code] || plan_code;
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -137,18 +194,41 @@ app.post("/api/checkout", async (req, reply) => {
       cancel_url: `${SITE_URL}/pricing?status=cancel`,
       customer_email: customer_email || undefined,
       allow_promotion_codes: true,
-      metadata: { plan_code, account_type, plan_name: plan_name || plan_code },
+      metadata: {
+        plan_code,
+        plan_label,
+        account_type,
+        quantity: String(quantity),
+      },
     });
 
-    reply.send({ url: session.url });
+    return reply.send({ url: session.url });
   } catch (err) {
-    req.log.error({ err }, "[checkout] error");
-    reply.code(500).send({ error: "checkout failed" });
+    // This is the key: surface what Stripe is mad about.
+    app.log.error(
+      {
+        message: err?.message,
+        type: err?.type,
+        code: err?.code,
+        param: err?.param,
+        raw: err?.raw?.message,
+      },
+      "[checkout] error"
+    );
+    return reply.code(500).send({
+      error: "checkout failed",
+      // Temporary: include a tiny hint to speed us up. Remove later if you prefer.
+      hint: err?.message || "stripe error",
+    });
   }
 });
 
 // ---- Start ----
 const port = Number(process.env.PORT || 8080);
-app.listen({ port, host: "0.0.0.0" })
+app
+  .listen({ port, host: "0.0.0.0" })
   .then(() => app.log.info(`✅ API listening on 0.0.0.0:${port}`))
-  .catch(err => { console.error(err); process.exit(1); });
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
