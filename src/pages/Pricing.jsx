@@ -1,19 +1,42 @@
+// src/pages/Pricing.jsx
 import { PLANS } from "../lib/pricing.js";
 import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
-// remove: import { planToStripe } from "../utils/planMap.js";
+
+// 👇 If your Supabase client file is named differently, adjust this path.
+import { supabase } from "../lib/supabaseClient.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
 if (!API_URL) console.error("VITE_API_URL is not set — cannot call /api/checkout");
 
-/** Create Stripe Checkout session on the API and redirect */
-async function startCheckout(planCode, accountType = "personal") {
+// Grab the current user email (if signed in) to prefill Stripe Checkout
+async function getUserEmail() {
   try {
+    const { data } = await supabase.auth.getUser();
+    return data?.user?.email || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Create Stripe Checkout session on the API and redirect */
+async function startCheckout(planCode, accountType = "personal", setBusy) {
+  try {
+    setBusy(true);
+
+    const customer_email = await getUserEmail();
+
     const res = await fetch(`${API_URL}/api/checkout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan_code: planCode, account_type: accountType, quantity: 1 }),
+      body: JSON.stringify({
+        plan_code: planCode,
+        account_type: accountType,
+        quantity: 1,
+        // sending email helps Stripe prefill; webhook is what writes to Supabase
+        customer_email: customer_email || undefined,
+      }),
     });
 
     if (!res.ok) {
@@ -28,14 +51,16 @@ async function startCheckout(planCode, accountType = "personal") {
   } catch (err) {
     console.error("[pricing] checkout error", err);
     alert("We couldn’t start checkout. Please try again in a moment.");
+  } finally {
+    setBusy(false);
   }
 }
 
 /** Handle clicks: send plan.code (server maps it to Stripe price) */
-function handlePlanClick(e, plan) {
+function handlePlanClick(e, plan, setBusy) {
   e.preventDefault();
   const accountType = plan.accountType || (plan.business ? "business" : "personal");
-  startCheckout(plan.code, accountType);
+  startCheckout(plan.code, accountType, setBusy);
 }
 
 const personalCards = [PLANS.personal, PLANS.gaming];
@@ -45,23 +70,22 @@ export default function Pricing() {
   return (
     <>
       <section className="bg-gradient-to-b from-background to-white py-20 text-center">
-  <div className="container-xl">
-    <h1 className="text-5xl font-extrabold text-primary">Simple, Transparent Pricing</h1>
-    <p className="mt-4 text-lg text-gray-700 max-w-2xl mx-auto">
-      No hidden fees. No contracts. Cancel anytime. Choose the plan that fits your lifestyle or business.
-    </p>
-  </div>
-
+        <div className="container-xl">
+          <h1 className="text-5xl font-extrabold text-primary">Simple, Transparent Pricing</h1>
+          <p className="mt-4 text-lg text-gray-700 max-w-2xl mx-auto">
+            No hidden fees. No contracts. Cancel anytime. Choose the plan that fits your lifestyle or business.
+          </p>
+        </div>
 
         {/* Quick jump links */}
-<div className="flex justify-center mt-10 gap-4">
-  <a href="#personal" className="px-4 py-2 rounded-full bg-primary text-white hover:bg-primary/90">
-    Personal & Gaming
-  </a>
-  <a href="#business" className="px-4 py-2 rounded-full bg-gray-200 text-dark hover:bg-gray-300">
-    Business
-  </a>
-</div>
+        <div className="flex justify-center mt-10 gap-4">
+          <a href="#personal" className="px-4 py-2 rounded-full bg-primary text-white hover:bg-primary/90">
+            Personal & Gaming
+          </a>
+          <a href="#business" className="px-4 py-2 rounded-full bg-gray-200 text-dark hover:bg-gray-300">
+            Business
+          </a>
+        </div>
 
         {/* Personal & Gaming */}
         <div id="personal" className="mt-10">
@@ -100,18 +124,18 @@ export default function Pricing() {
 }
 
 function PlanCard({ plan }) {
+  const [busy, setBusy] = React.useState(false);
+
   return (
     <div className="card p-6 flex flex-col">
       {plan.badge && (
-  <span className="inline-block mb-2 px-3 py-1 text-xs font-semibold bg-secondary text-white rounded-full">
-    {plan.badge}
-  </span>
-)}
+        <span className="inline-block mb-2 px-3 py-1 text-xs font-semibold bg-secondary text-white rounded-full">
+          {plan.badge}
+        </span>
+      )}
       <h3 className="text-xl font-semibold">{plan.name}</h3>
       <p className="mt-1 text-gray-600">
-        {String(plan.devices).includes("Unlimited")
-          ? "Unlimited devices"
-          : `${plan.devices} devices`}
+        {String(plan.devices).includes("Unlimited") ? "Unlimited devices" : `${plan.devices} devices`}
       </p>
       <div className="mt-4">
         <span className="text-4xl font-bold">${plan.price}</span>
@@ -123,9 +147,14 @@ function PlanCard({ plan }) {
         ))}
       </ul>
       <div className="mt-6">
-        <button type="button" onClick={(e) => handlePlanClick(e, plan)} className="button-primary w-full text-center">
-  Get {plan.name}
-</button>
+        <button
+          type="button"
+          onClick={(e) => handlePlanClick(e, plan, setBusy)}
+          className="button-primary w-full text-center disabled:opacity-60"
+          disabled={busy}
+        >
+          {busy ? "Redirecting…" : `Get ${plan.name}`}
+        </button>
       </div>
     </div>
   );
