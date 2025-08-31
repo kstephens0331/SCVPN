@@ -202,6 +202,29 @@ app.post("/api/checkout", async (req, reply) => {
       },
     });
 
+    app.get("/api/checkout/verify", async (req, reply) => {
+  try {
+    if (!requireStripe(reply)) return;
+    const session_id = req.query.session_id || req.query.sid;
+    if (!session_id) return reply.code(400).send({ error: "missing session_id" });
+
+    const s = await stripe.checkout.sessions.retrieve(session_id, {
+      expand: ["customer", "line_items.data.price.product"]
+    });
+
+    const li = s.line_items?.data?.[0];
+    reply.send({
+      email: s.customer_details?.email || s.customer?.email || null,
+      plan_code: s.metadata?.plan_code || null,
+      account_type: s.metadata?.account_type || "personal",
+      quantity: li?.quantity || 1
+    });
+  } catch (err) {
+    req.log.error({ err }, "[verify] error");
+    reply.code(500).send({ error: "verify failed" });
+  }
+});
+
     return reply.send({ url: session.url });
   } catch (err) {
     // This is the key: surface what Stripe is mad about.

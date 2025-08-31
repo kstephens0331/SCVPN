@@ -16,8 +16,8 @@ export default function PostCheckout() {
   const [password, setPassword] = useState("");
 
   // ✅ define query params first, then use them
-  const qp        = new URLSearchParams(loc.search);
-  const sessionId = qp.get("session_id") || qp.get("sid");
+ const qs = new URLSearchParams(loc.search);
+ const sessionId = qs.get("sid") || qs.get("session_id");
 
   // Map plan code → display name (from PLANS)
   const planName =
@@ -33,9 +33,8 @@ export default function PostCheckout() {
       try {
         if (!sessionId) { setLoading(false); return; }
 
-        const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/checkout-verify?session_id=${encodeURIComponent(sessionId)}`;
-        const res   = await fetch(fnUrl);
-        const out   = await res.json().catch(() => ({}));
+const api = import.meta.env.VITE_API_URL;
+ const res = await fetch(`${api}/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`);
 
         if (res.ok) {
           // These fields should be returned by your Supabase Function:
