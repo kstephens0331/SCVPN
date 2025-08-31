@@ -1,29 +1,28 @@
 // src/pages/Pricing.jsx
-import React, { useState } from "react";
 import { PLANS } from "../lib/pricing.js";
-import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
+import { useState } from "react";
+import { supabase } from "../supabaseClient.js";
 
 const API_URL = import.meta.env.VITE_API_URL;
 if (!API_URL) console.error("VITE_API_URL is not set — cannot call /api/checkout");
 
-// optional helper – fill from your auth if you have it
+
+// Grab the current user email (if signed in) to prefill Stripe Checkout
 async function getUserEmail() {
   try {
-    // If you’re using Supabase Auth, you can uncomment:
-    // const { data } = await supabase.auth.getUser();
-    // return data?.user?.email || undefined;
-    return undefined;
+    const { data } = await supabase.auth.getUser();
+    return data?.user?.email || null;
   } catch {
-    return undefined;
+    return null;
   }
 }
 
 /** Create Stripe Checkout session on the API and redirect */
-async function startCheckout(planCode, accountType = "personal", planName, setBusy) {
+async function startCheckout(planCode, accountType = "personal", setBusy) {
   try {
-    if (typeof setBusy === "function") setBusy(true);
+    setBusy(true);
 
     const customer_email = await getUserEmail();
 
@@ -32,10 +31,10 @@ async function startCheckout(planCode, accountType = "personal", planName, setBu
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         plan_code: planCode,
-        plan_name: planName,           // 👈 include readable name
+        plan_name: planName,
         account_type: accountType,
         quantity: 1,
-        customer_email: customer_email // 👈 prefill Stripe email if available
+        customer_email: customer_email || undefined,
       }),
     });
 
@@ -52,11 +51,11 @@ async function startCheckout(planCode, accountType = "personal", planName, setBu
     console.error("[pricing] checkout error", err);
     alert("We couldn’t start checkout. Please try again in a moment.");
   } finally {
-    if (typeof setBusy === "function") setBusy(false);
+    setBusy(false);
   }
 }
 
-/** Handle clicks: send plan.code and plan.name */
+/** Handle clicks: send plan.code (server maps it to Stripe price) */
 function handlePlanClick(e, plan, setBusy) {
   e.preventDefault();
   const accountType = plan.accountType || (plan.business ? "business" : "personal");
@@ -117,6 +116,7 @@ export default function Pricing() {
         </div>
       </section>
 
+      {/* Competitor comparison section */}
       <FAQComparison />
     </>
   );
@@ -148,16 +148,12 @@ function PlanCard({ plan }) {
       <div className="mt-6">
         <button
           type="button"
-          disabled={busy}
           onClick={(e) => handlePlanClick(e, plan, setBusy)}
           className="button-primary w-full text-center disabled:opacity-60"
+          disabled={busy}
         >
           {busy ? "Redirecting…" : `Get ${plan.name}`}
         </button>
-      </div>
-      {/* fallback link if JS disabled */}
-      <div className="mt-2 text-center">
-        <Link to="/login" className="text-sm text-gray-500 underline">Sign in first</Link>
       </div>
     </div>
   );
