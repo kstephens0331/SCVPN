@@ -59,7 +59,7 @@ export default function PostCheckout() {
   e.preventDefault();
   if (!email || !password) { alert("Please enter a password."); return; }
 
-  // 1) Try sign up
+  // Try sign up
   const { error: signUpError } = await supabase.auth.signUp({
     email,
     password,
@@ -67,7 +67,7 @@ export default function PostCheckout() {
   });
 
   if (signUpError) {
-    // If the user already exists, sign them in instead
+    // If account exists, sign in instead
     if (/registered|exists|already/i.test(signUpError.message || "")) {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) { alert(signInError.message || "Sign in failed"); return; }
@@ -78,26 +78,18 @@ export default function PostCheckout() {
     }
   }
 
-const { data: userData, error: userErr } = await supabase.auth.getUser();
- if (userErr || !userData?.user?.id) {
-   console.error("[claim] getUser failed", userErr, userData);
-   alert("Could not determine user id"); 
-   return;
- }
- const user_id = userData.user.id;
-
- const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
- const claimRes = await fetch(`${api}/api/checkout/claim`, {
-   method: "POST",
-   headers: { "Content-Type": "application/json" },
-   body: JSON.stringify({ session_id: sessionId, email }),
- });
+  const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
+  const claimRes = await fetch(`${api}/api/checkout/claim`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, email }),
+  });
   const claimOut = await claimRes.json().catch(() => ({}));
   if (!claimRes.ok) {
-  alert(claimOut.error || `Claim failed (status ${claimRes.status})`);
-  return;}
+    alert(claimOut.error || `Claim failed (status ${claimRes.status})`);
+    return;
+  }
 
-  // 3) Route to the right dashboard
   nav(atype === "business" ? "/app/business/devices" : "/app/personal/devices");
 };
 
