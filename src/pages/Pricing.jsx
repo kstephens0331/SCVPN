@@ -5,9 +5,10 @@ import { Link } from "react-router-dom";
 import CheckItem from "../components/CheckItem.jsx";
 import FAQComparison from "../components/FAQComparison.jsx";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
 if (!API_URL) console.error("VITE_API_URL is not set — cannot call /api/checkout");
 
+console.log("API URL is", import.meta.env.VITE_API_URL);
 // optional helper – fill from your auth if you have it
 async function getUserEmail() {
   try {
