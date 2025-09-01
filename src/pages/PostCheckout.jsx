@@ -78,17 +78,23 @@ export default function PostCheckout() {
     }
   }
 
-  const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
-  const claimRes = await fetch(`${api}/api/checkout/claim`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id: sessionId, email }),
-  });
-  const claimOut = await claimRes.json().catch(() => ({}));
-  if (!claimRes.ok) {
-    alert(claimOut.error || `Claim failed (status ${claimRes.status})`);
-    return;
-  }
+ const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
+const claimRes = await fetch(`${api}/api/checkout/claim`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    session_id: sessionId,
+    email,
+    plan_code: plan,        // your state variable from verify
+    account_type: atype,    // "personal" | "business"
+    quantity: qty
+  }),
+});
+const claimOut = await claimRes.json().catch(() => ({}));
+if (!claimRes.ok) {
+  alert(claimOut.error || `Claim failed (status ${claimRes.status})`);
+  return;
+}
 
   nav(atype === "business" ? "/app/business/devices" : "/app/personal/devices");
 };

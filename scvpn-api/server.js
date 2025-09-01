@@ -123,13 +123,7 @@ function requireStripe(reply) {
 const mask = (v) => (typeof v === "string" ? v.replace(/^(.{6}).+(.{4})$/, "$1…$2") : v);
 
 
- await app.register(fastifyRawBody, {
-   field: "rawBody",          // req.rawBody (string)
-   global: false,             // only on selected routes
-   runFirst: true,            // grab body before any parsers
-   encoding: "utf8",
-   routes: ["/api/stripe/webhook"],  // enable for this path
- });
+await app.register(fastifyRawBody, { field: "rawBody", global: false, routes: ["/api/stripe/webhook"] });
 
 // ---- Routes ----
 app.get("/api/healthz", async () => ({
@@ -262,11 +256,19 @@ app.post("/api/checkout/claim", async (req, reply) => {
   try {
     if (!supabase) return reply.code(500).send({ error: "supabase service not configured" });
 
-    const { session_id, email } = req.body || {};
+    const {
+      session_id,
+      email,
+      plan_code,
+      account_type = "personal",
+      quantity = 1,
+    } = req.body || {};
+
     if (!session_id) return reply.code(400).send({ error: "missing session_id" });
     if (!email)      return reply.code(400).send({ error: "missing email" });
 
-    const { data, error } = await supabase
+    // 1) Try to claim an existing row
+    const upd = await supabase
       .from("checkout_sessions")
       .update({ claimed_email: email, claimed_at: new Date().toISOString() })
       .eq("id", session_id)
@@ -274,14 +276,34 @@ app.post("/api/checkout/claim", async (req, reply) => {
       .select("*")
       .maybeSingle();
 
-    if (error) return reply.code(400).send({ error: error.message });
-    if (!data)  return reply.code(404).send({ error: "session not found or already claimed" });
+    if (upd.error) return reply.code(400).send({ error: upd.error.message });
+    if (upd.data) return reply.send({ ok: true, data: upd.data });
 
-    reply.send({ ok: true, data });
+    // 2) If not found, create it (webhook might be late) then claim
+    const ins = await supabase
+      .from("checkout_sessions")
+      .upsert({
+        id: session_id,
+        email,
+        plan_code: plan_code || null,
+        account_type,
+        quantity: Number(quantity || 1),
+        created_at: new Date().toISOString(),
+        claimed_email: email,
+        claimed_at: new Date().toISOString(),
+      }, { onConflict: "id" })
+      .select("*")
+      .maybeSingle();
+
+    if (ins.error) return reply.code(400).send({ error: ins.error.message });
+    if (!ins.data) return reply.code(404).send({ error: "session not found or already claimed" });
+
+    return reply.send({ ok: true, data: ins.data });
   } catch (err) {
     reply.code(500).send({ error: "claim failed" });
   }
 });
+
 
 app.post("/api/stripe/webhook", { config: { rawBody: true } }, async (req, reply) => {
   try {
@@ -309,7 +331,7 @@ case "checkout.session.completed": {
   if (supabase) {
     const s = event.data.object;
     const qty = Number(s.metadata?.quantity) || s?.line_items?.data?.[0]?.quantity || 1;
-    const { error: upsertErr } = await supabase
+    const { error } = await supabase
       .from("checkout_sessions")
       .upsert({
         id: s.id,
@@ -319,10 +341,11 @@ case "checkout.session.completed": {
         quantity: qty,
         created_at: new Date().toISOString(),
       }, { onConflict: "id" });
-    if (upsertErr) app.log.error({ upsertErr }, "[webhook] upsert checkout_sessions failed");
+    if (error) app.log.error({ error }, "[webhook] upsert checkout_sessions failed");
   }
   break;
 }
+
 
 
       case "customer.subscription.created":
