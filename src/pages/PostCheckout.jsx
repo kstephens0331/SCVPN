@@ -78,20 +78,20 @@ export default function PostCheckout() {
     }
   }
 
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-if (userErr || !userData?.user?.id) {
-  alert("Could not determine user id");
-  return;
-}
-const user_id = userData.user.id;
+const { data: userData, error: userErr } = await supabase.auth.getUser();
+ if (userErr || !userData?.user?.id) {
+   console.error("[claim] getUser failed", userErr, userData);
+   alert("Could not determine user id"); 
+   return;
+ }
+ const user_id = userData.user.id;
 
-  // 2) Claim the session via your API (service role does the work)
-  const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
-  const claimRes = await fetch(`${api}/api/checkout/claim`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id: sessionId, user_id }),
-  });
+ const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
+ const claimRes = await fetch(`${api}/api/checkout/claim`, {
+   method: "POST",
+   headers: { "Content-Type": "application/json" },
+   body: JSON.stringify({ session_id: sessionId, user_id }),
+ });
   const claimOut = await claimRes.json().catch(() => ({}));
   if (!claimRes.ok) {
   alert(claimOut.error || `Claim failed (status ${claimRes.status})`);
