@@ -122,11 +122,7 @@ function requireStripe(reply) {
 // mask helper for logs
 const mask = (v) => (typeof v === "string" ? v.replace(/^(.{6}).+(.{4})$/, "$1…$2") : v);
 
-await app.register(rawBody, {
-  field: "rawBody",          // req.rawBody will be set
-  global: false,             // only for the routes we list
-  routes: ["/api/stripe/webhook"],
-});
+
  await app.register(fastifyRawBody, {
    field: "rawBody",          // req.rawBody (string)
    global: false,             // only on selected routes
