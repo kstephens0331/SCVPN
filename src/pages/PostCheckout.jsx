@@ -90,7 +90,7 @@ const { data: userData, error: userErr } = await supabase.auth.getUser();
  const claimRes = await fetch(`${api}/api/checkout/claim`, {
    method: "POST",
    headers: { "Content-Type": "application/json" },
-   body: JSON.stringify({ session_id: sessionId, user_id }),
+   body: JSON.stringify({ session_id: sessionId, email }),
  });
   const claimOut = await claimRes.json().catch(() => ({}));
   if (!claimRes.ok) {

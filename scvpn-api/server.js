@@ -262,16 +262,16 @@ app.post("/api/checkout/claim", async (req, reply) => {
   try {
     if (!supabase) return reply.code(500).send({ error: "supabase service not configured" });
 
-    const { session_id, user_id } = req.body || {};
+    const { session_id, email } = req.body || {};
     if (!session_id) return reply.code(400).send({ error: "missing session_id" });
-    if (!user_id)    return reply.code(400).send({ error: "missing user_id" });
+    if (!email)      return reply.code(400).send({ error: "missing email" });
 
     // Only claim if row exists and not already claimed
     const { data, error } = await supabase
       .from("checkout_sessions")
-      .update({ claimed_by: user_id, claimed_at: new Date().toISOString() })
+      .update({ claimed_email: email, claimed_at: new Date().toISOString() })
       .eq("id", session_id)
-      .is("claimed_by", null)
+      .is("claimed_email", null)
       .select("*")
       .maybeSingle();
 
