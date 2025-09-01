@@ -261,14 +261,29 @@ app.post("/api/checkout", async (req, reply) => {
 app.post("/api/checkout/claim", async (req, reply) => {
   try {
     if (!supabase) return reply.code(500).send({ error: "supabase service not configured" });
-    const { session_id } = req.body || {};
-    if (!session_id) return reply.code(400).send({ error: "missing session_id" });
 
-    const { data, error } = await supabase.rpc("claim_signup", { session_id });
+    const { session_id, user_id } = req.body || {};
+    if (!session_id) return reply.code(400).send({ error: "missing session_id" });
+    if (!user_id)    return reply.code(400).send({ error: "missing user_id" });
+
+    // Only claim if row exists and not already claimed
+    const { data, error } = await supabase
+      .from("checkout_sessions")
+      .update({ claimed_by: user_id, claimed_at: new Date().toISOString() })
+      .eq("id", session_id)
+      .is("claimed_by", null)
+      .select("*")
+      .maybeSingle();
+
     if (error) {
-      req.log.error({ message: error.message }, "[claim] rpc error");
+      req.log.error({ message: error.message }, "[claim] update error");
       return reply.code(400).send({ error: error.message });
     }
+    if (!data) {
+      // Either no row yet (webhook hasn’t upserted) or already claimed
+      return reply.code(404).send({ error: "session not found or already claimed" });
+    }
+
     reply.send({ ok: true, data });
   } catch (err) {
     req.log.error({ message: err?.message }, "[claim] error");
