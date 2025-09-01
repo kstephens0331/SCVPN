@@ -258,6 +258,24 @@ app.post("/api/checkout", async (req, reply) => {
   }
 });
 
+app.post("/api/checkout/claim", async (req, reply) => {
+  try {
+    if (!supabase) return reply.code(500).send({ error: "supabase service not configured" });
+    const { session_id } = req.body || {};
+    if (!session_id) return reply.code(400).send({ error: "missing session_id" });
+
+    const { data, error } = await supabase.rpc("claim_signup", { session_id });
+    if (error) {
+      req.log.error({ message: error.message }, "[claim] rpc error");
+      return reply.code(400).send({ error: error.message });
+    }
+    reply.send({ ok: true, data });
+  } catch (err) {
+    req.log.error({ message: err?.message }, "[claim] error");
+    reply.code(500).send({ error: "claim failed" });
+  }
+});
+
 app.post("/api/stripe/webhook", { config: { rawBody: true } }, async (req, reply) => {
   try {
     if (!requireStripe(reply)) return;

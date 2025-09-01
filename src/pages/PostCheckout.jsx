@@ -35,8 +35,7 @@ export default function PostCheckout() {
 
       const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
       const res = await fetch(`${api}/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`);
-
-      const out = await res.json(); // <-- parse first
+      const out = await res.json();
 
       if (res.ok) {
         setEmail(out.email || "");
@@ -57,29 +56,41 @@ export default function PostCheckout() {
 }, [sessionId]);
 
   const handleRegister = async (e) => {
-    e.preventDefault();
-    if (!email || !password) { alert("Please enter a password."); return; }
+  e.preventDefault();
+  if (!email || !password) { alert("Please enter a password."); return; }
 
-    // Create (or sign-in) the user
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) {
-      // If already registered, try sign-in
-      if (/registered|exists/i.test(error.message)) {
-        const { error: e2 } = await supabase.auth.signInWithPassword({ email, password });
-        if (e2) { alert(e2.message); return; }
-      } else {
-        alert(error.message);
-        return;
-      }
+  // 1) Try sign up
+  const { error: signUpError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
+  });
+
+  if (signUpError) {
+    // If the user already exists, sign them in instead
+    if (/registered|exists|already/i.test(signUpError.message || "")) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) { alert(signInError.message || "Sign in failed"); return; }
+    } else {
+      console.error("[signup] error", signUpError);
+      alert(signUpError.message || "Sign up failed");
+      return;
     }
+  }
 
-    // Mark the session as claimed/attach to the user (your Postgres RPC)
-    const { error: e3 } = await supabase.rpc("claim_signup", { session_id: sessionId });
-    if (e3) { alert(e3.message); return; }
+  // 2) Claim the session via your API (service role does the work)
+  const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
+  const claimRes = await fetch(`${api}/api/checkout/claim`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  const claimOut = await claimRes.json().catch(() => ({}));
+  if (!claimRes.ok) { alert(claimOut.error || "Claim failed"); return; }
 
-    // Send them to the right dashboard
-    nav(atype === "business" ? "/app/business/devices" : "/app/personal/devices");
-  };
+  // 3) Route to the right dashboard
+  nav(atype === "business" ? "/app/business/devices" : "/app/personal/devices");
+};
 
   if (loading) return <div className="p-6">Finalizing your purchase…</div>;
 
