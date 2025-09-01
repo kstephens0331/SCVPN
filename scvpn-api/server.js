@@ -266,7 +266,6 @@ app.post("/api/checkout/claim", async (req, reply) => {
     if (!session_id) return reply.code(400).send({ error: "missing session_id" });
     if (!email)      return reply.code(400).send({ error: "missing email" });
 
-    // Only claim if row exists and not already claimed
     const { data, error } = await supabase
       .from("checkout_sessions")
       .update({ claimed_email: email, claimed_at: new Date().toISOString() })
@@ -275,18 +274,11 @@ app.post("/api/checkout/claim", async (req, reply) => {
       .select("*")
       .maybeSingle();
 
-    if (error) {
-      req.log.error({ message: error.message }, "[claim] update error");
-      return reply.code(400).send({ error: error.message });
-    }
-    if (!data) {
-      // Either no row yet (webhook hasn’t upserted) or already claimed
-      return reply.code(404).send({ error: "session not found or already claimed" });
-    }
+    if (error) return reply.code(400).send({ error: error.message });
+    if (!data)  return reply.code(404).send({ error: "session not found or already claimed" });
 
     reply.send({ ok: true, data });
   } catch (err) {
-    req.log.error({ message: err?.message }, "[claim] error");
     reply.code(500).send({ error: "claim failed" });
   }
 });
@@ -313,28 +305,25 @@ app.post("/api/stripe/webhook", { config: { rawBody: true } }, async (req, reply
 
     // Handle the events you care about
     switch (event.type) {
-      case "checkout.session.completed":
-        // TODO: mark user as paid, record plan_code from event.data.object.metadata.plan_code
-        app.log.info({ id: event.id }, "[webhook] checkout.session.completed");
-         if (supabase) {
-   const s = event.data.object;
-   const qty =
-     Number(s.metadata?.quantity) ||
-     s?.line_items?.data?.[0]?.quantity ||
-     1;
-   const { error: upsertErr } = await supabase
-     .from("checkout_sessions")
-     .upsert({
-       id: s.id,
-       email: s.customer_details?.email || null,
-       plan_code: s.metadata?.plan_code || null,
-       account_type: s.metadata?.account_type || "personal",
-       quantity: qty,
-       created_at: new Date().toISOString(),
-     }, { onConflict: "id" });
-   if (upsertErr) app.log.error({ upsertErr }, "[webhook] upsert checkout_sessions failed");
- }
-        break;
+case "checkout.session.completed": {
+  if (supabase) {
+    const s = event.data.object;
+    const qty = Number(s.metadata?.quantity) || s?.line_items?.data?.[0]?.quantity || 1;
+    const { error: upsertErr } = await supabase
+      .from("checkout_sessions")
+      .upsert({
+        id: s.id,
+        email: s.customer_details?.email || null,
+        plan_code: s.metadata?.plan_code || null,
+        account_type: s.metadata?.account_type || "personal",
+        quantity: qty,
+        created_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+    if (upsertErr) app.log.error({ upsertErr }, "[webhook] upsert checkout_sessions failed");
+  }
+  break;
+}
+
 
       case "customer.subscription.created":
       case "customer.subscription.updated":
