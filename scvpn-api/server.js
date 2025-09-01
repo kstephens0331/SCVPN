@@ -3,6 +3,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import rawBody from "fastify-raw-body";
 
 // ---- Env ----
 const {
@@ -120,6 +121,12 @@ function requireStripe(reply) {
 
 // mask helper for logs
 const mask = (v) => (typeof v === "string" ? v.replace(/^(.{6}).+(.{4})$/, "$1…$2") : v);
+
+await app.register(rawBody, {
+  field: "rawBody",          // req.rawBody will be set
+  global: false,             // only for the routes we list
+  routes: ["/api/stripe/webhook"],
+});
 
 // ---- Routes ----
 app.get("/api/healthz", async () => ({
@@ -247,6 +254,55 @@ app.post("/api/checkout", async (req, reply) => {
     reply.code(500).send({ error: "verify failed" });
   }
 });
+
+app.post("/api/stripe/webhook", async (req, reply) => {
+  try {
+    if (!requireStripe(reply)) return;
+
+    const sig = req.headers["stripe-signature"];
+    const secret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!secret) {
+      app.log.error("[webhook] STRIPE_WEBHOOK_SECRET missing");
+      return reply.code(500).send("Server misconfigured");
+    }
+
+    let event;
+    try {
+      // IMPORTANT: use the raw *string* body for verification
+      event = stripe.webhooks.constructEvent(req.rawBody, sig, secret);
+    } catch (err) {
+      app.log.error({ message: err?.message }, "[webhook] verify failed");
+      return reply.code(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the events you care about
+    switch (event.type) {
+      case "checkout.session.completed":
+        // TODO: mark user as paid, record plan_code from event.data.object.metadata.plan_code
+        app.log.info({ id: event.id }, "[webhook] checkout.session.completed");
+        break;
+
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted":
+        // TODO: sync subscription status to your DB
+        app.log.info({ id: event.id, type: event.type }, "[webhook] subscription change");
+        break;
+
+      default:
+        app.log.info({ type: event.type }, "[webhook] unhandled");
+    }
+
+    // Must return 200 quickly so Stripe stops retrying
+    return reply.code(200).send({ received: true });
+  } catch (err) {
+    app.log.error({ message: err?.message }, "[webhook] error");
+    return reply.code(500).send("Webhook handler error");
+  }
+});
+
+
+// ---- Start ----
 const port = Number(process.env.PORT || 8080);
 app
   .listen({ port, host: "0.0.0.0" })
