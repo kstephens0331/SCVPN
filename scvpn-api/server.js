@@ -127,6 +127,13 @@ await app.register(rawBody, {
   global: false,             // only for the routes we list
   routes: ["/api/stripe/webhook"],
 });
+ await app.register(fastifyRawBody, {
+   field: "rawBody",          // req.rawBody (string)
+   global: false,             // only on selected routes
+   runFirst: true,            // grab body before any parsers
+   encoding: "utf8",
+   routes: ["/api/stripe/webhook"],  // enable for this path
+ });
 
 // ---- Routes ----
 app.get("/api/healthz", async () => ({
@@ -255,7 +262,7 @@ app.post("/api/checkout", async (req, reply) => {
   }
 });
 
-app.post("/api/stripe/webhook", async (req, reply) => {
+app.post("/api/stripe/webhook", { config: { rawBody: true } }, async (req, reply) => {
   try {
     if (!requireStripe(reply)) return;
 
