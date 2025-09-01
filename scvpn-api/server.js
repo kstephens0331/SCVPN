@@ -3,7 +3,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import rawBody from "fastify-raw-body";
+import fastifyRawBody from "fastify-raw-body";
 
 // ---- Env ----
 const {
