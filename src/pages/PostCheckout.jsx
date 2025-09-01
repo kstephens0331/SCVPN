@@ -47,6 +47,17 @@ const api = import.meta.env.VITE_API_URL;
           console.error("[post-checkout] verify failed:", out);
           alert(out.error || "Unable to verify checkout.");
         }
+         const out = await res.json();
+ if (res.ok) {
+   setEmail(out.email || "");
+   setPlan(out.plan_code || "");
+   setAtype(out.account_type || "personal");
+   setQty(Number(out.quantity || 1));
+ } else {
+   console.error("[post-checkout] verify failed:", out);
+   alert(out.error || "Unable to verify checkout.");
+ }
+
       } catch (e) {
         console.error("[post-checkout] verify error:", e);
         alert("Error verifying checkout.");
