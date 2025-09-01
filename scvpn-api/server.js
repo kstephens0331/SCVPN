@@ -301,6 +301,24 @@ app.post("/api/stripe/webhook", { config: { rawBody: true } }, async (req, reply
       case "checkout.session.completed":
         // TODO: mark user as paid, record plan_code from event.data.object.metadata.plan_code
         app.log.info({ id: event.id }, "[webhook] checkout.session.completed");
+         if (supabase) {
+   const s = event.data.object;
+   const qty =
+     Number(s.metadata?.quantity) ||
+     s?.line_items?.data?.[0]?.quantity ||
+     1;
+   const { error: upsertErr } = await supabase
+     .from("checkout_sessions")
+     .upsert({
+       id: s.id,
+       email: s.customer_details?.email || null,
+       plan_code: s.metadata?.plan_code || null,
+       account_type: s.metadata?.account_type || "personal",
+       quantity: qty,
+       created_at: new Date().toISOString(),
+     }, { onConflict: "id" });
+   if (upsertErr) app.log.error({ upsertErr }, "[webhook] upsert checkout_sessions failed");
+ }
         break;
 
       case "customer.subscription.created":
