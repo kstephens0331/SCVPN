@@ -29,43 +29,32 @@ export default function PostCheckout() {
     "unknown";
 
   useEffect(() => {
-    (async () => {
-      try {
-        if (!sessionId) { setLoading(false); return; }
+  (async () => {
+    try {
+      if (!sessionId) { setLoading(false); return; }
 
-const api = import.meta.env.VITE_API_URL;
- const res = await fetch(`${api}/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`);
+      const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
+      const res = await fetch(`${api}/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`);
 
-        if (res.ok) {
-          // These fields should be returned by your Supabase Function:
-          // { email, plan_code, account_type, quantity }
-          setEmail(out.email || "");
-          setPlan(out.plan_code || "");
-          setAtype(out.account_type || "personal");
-          setQty(Number(out.quantity || 1));
-        } else {
-          console.error("[post-checkout] verify failed:", out);
-          alert(out.error || "Unable to verify checkout.");
-        }
-         const out = await res.json();
- if (res.ok) {
-   setEmail(out.email || "");
-   setPlan(out.plan_code || "");
-   setAtype(out.account_type || "personal");
-   setQty(Number(out.quantity || 1));
- } else {
-   console.error("[post-checkout] verify failed:", out);
-   alert(out.error || "Unable to verify checkout.");
- }
+      const out = await res.json(); // <-- parse first
 
-      } catch (e) {
-        console.error("[post-checkout] verify error:", e);
-        alert("Error verifying checkout.");
-      } finally {
-        setLoading(false);
+      if (res.ok) {
+        setEmail(out.email || "");
+        setPlan(out.plan_code || "");
+        setAtype(out.account_type || "personal");
+        setQty(Number(out.quantity || 1));
+      } else {
+        console.error("[post-checkout] verify failed:", out);
+        alert(out.error || "Unable to verify checkout.");
       }
-    })();
-  }, [sessionId]);
+    } catch (e) {
+      console.error("[post-checkout] verify error:", e);
+      alert("Error verifying checkout.");
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, [sessionId]);
 
   const handleRegister = async (e) => {
     e.preventDefault();
