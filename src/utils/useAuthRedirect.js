@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 const PUBLIC_PATHS = new Set([
-  "/", "/pricing", "/faq", "/contact", "/login", "/about", "/post-checkout", "/app"
+  "/", "/pricing", "/faq", "/contact", "/login", "/about", "/post-checkout", "/app", "/auth/callback"
 ]);
 
 const roleToDefault = (role) => {

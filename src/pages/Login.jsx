@@ -11,6 +11,11 @@ export default function Login(){
   const [password, setPassword] = useState("")
   const [err, setErr] = useState("")
   const [loading, setLoading] = useState(false)
+  
+  // Check for messages from auth callback
+  const params = new URLSearchParams(loc.search);
+  const message = params.get("message");
+  const showVerificationMessage = message === "verification_expired";
 
   async function onSubmit(e){
     e.preventDefault()
@@ -49,6 +54,15 @@ export default function Login(){
     <div className="fixed inset-0 z-[9999] w-screen h-screen bg-black text-lime-400 flex items-center justify-center">
       <div className="w-full max-w-md px-6">
         <h1 className="text-4xl sm:text-5xl font-extrabold mb-6 text-center">Sign in</h1>
+        
+        {showVerificationMessage && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md p-4 mb-4">
+            <p className="text-yellow-400 text-sm">
+              Your email verification link has expired. Please sign in to request a new verification email.
+            </p>
+          </div>
+        )}
+        
         <form onSubmit={onSubmit} className="grid gap-4">
           <input
             type="email"
