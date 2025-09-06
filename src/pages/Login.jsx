@@ -20,7 +20,28 @@ export default function Login(){
     setLoading(false)
     if (error) { setErr(error.message); return }
     await refresh()
-    nav("/app", { replace: true })
+    // Respect ?next=, otherwise choose a role-based default
+    const params = new URLSearchParams(loc.search);
+    const next = params.get("next");
+
+    // fetch role
+    const { data: { user } } = await supabase.auth.getUser();
+    let role = "client";
+    if (user) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (data?.role) role = data.role;
+    }
+    const roleToDefault = (r) =>
+      r === "admin" ? "/admin" :
+      r === "business" ? "/app/business/overview" :
+      "/app/personal/overview";
+
+    const to = (next && next.startsWith("/")) ? next : roleToDefault(role);
+    nav(to, { replace: true });
   }
 
   return (
@@ -50,7 +71,7 @@ export default function Login(){
             disabled={loading}
             className="rounded-md bg-lime-400 text-black font-semibold px-3 py-2 hover:bg-lime-300 disabled:opacity-60"
           >
-            {loading ? "Signing in�" : "Sign in"}
+            {loading ? "Signing in" : "Sign in"}
           </button>
         </form>
       </div>

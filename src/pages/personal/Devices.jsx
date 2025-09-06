@@ -5,7 +5,7 @@ const PLATFORMS = ["ios","android","macos","windows","linux","router","other"];
 
 export default function PersonalDevices(){  async function requestKey(id){
     try{
-      const { data, error } = await supabase.rpc('request_wg_key', { p_device_id: id });
+      const { error } = await supabase.rpc('request_wg_key', { p_device_id: id });
       if (error) { alert('Failed: ' + error.message); return; }
       alert('Key request submitted. Check your email shortly.');
     }catch(e){
@@ -142,7 +142,7 @@ export default function PersonalDevices(){  async function requestKey(id){
                 </td>
                 <td className="py-2 pr-3">{d.platform}</td>
                 <td className="py-2 pr-3">{d.is_active ? "Yes" : "No"}</td>
-                <td className="py-2 pr-3">{conn[d.id] ? "?" : "—"}</td>
+                <td className="py-2 pr-3">{conn[d.id] ? "?" : "ï¿½"}</td>
                 <td className="py-2 pr-3 flex gap-3">
                   <a className="underline" href={`/api/device/${d.id}/config`} target="_blank" rel="noreferrer">Config</a>
                   <button className="underline" onClick={()=>toggle(d.id, d.is_active)}>{d.is_active? "Suspend" : "Activate"}</button>

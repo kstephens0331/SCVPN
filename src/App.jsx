@@ -31,8 +31,11 @@ import Dashboard from "./pages/Dashboard.jsx";
 import About from "./pages/About.jsx";
 import PostCheckout from "./pages/PostCheckout";
 
+import useAuthRedirect from './utils/useAuthRedirect';
+
 
 export default function App() {
+  useAuthRedirect();
   return (
     <Routes>
       <Route path="/app" element={<AppLanding />} />
@@ -42,7 +45,8 @@ export default function App() {
         <Route path="/faq" element={<FAQ />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+        
         <Route path="/about" element={<About />} />
       </Route>
     <Route path="/app/personal/*" element={<RequireAuth><PersonalLayout/></RequireAuth>}>

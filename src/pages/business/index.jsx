@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
 
 const PLATFORMS = ["ios","android","macos","windows","linux","router","other"];
@@ -20,12 +20,12 @@ export default function Business(){
       });
   },[]);
 
-  useEffect(()=>{ if (orgId) load(); },[orgId]);
-
-  async function load(){
+  const load = useCallback(async () => {
     const { data, error } = await supabase.from("devices").select("id,name,platform,is_active").eq("org_id", orgId).order("created_at",{ascending:false});
     if (error) setErr(error.message); else setRows(data||[]);
-  }
+  }, [orgId]);
+
+  useEffect(()=>{ if (orgId) load(); },[orgId, load]);
 
   async function addDevice(){
     const { error } = await supabase.from("devices").insert({ org_id: orgId, name, platform, is_active: true });
