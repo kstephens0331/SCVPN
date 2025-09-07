@@ -4,6 +4,7 @@ import cors from "@fastify/cors";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import fastifyRawBody from "fastify-raw-body";
+import { WireGuardManager } from "./wireguard-manager.js";
 
 // ---- Env ----
 const {
@@ -41,6 +42,9 @@ const supabase =
         auth: { persistSession: false },
       })
     : null;
+
+// Initialize WireGuard Manager
+const wgManager = supabase ? new WireGuardManager(supabase, app.log) : null;
 
 // ---- CORS allow-list ----
 const ALLOW = new Set(
@@ -367,12 +371,275 @@ case "checkout.session.completed": {
   }
 });
 
+// ---- WireGuard API Endpoints ----
+
+// Process key requests (background job or manual trigger)
+app.post("/api/wireguard/process-requests", async (req, reply) => {
+  try {
+    if (!wgManager) {
+      return reply.code(500).send({ error: "WireGuard manager not initialized" });
+    }
+
+    const { data: requests, error } = await supabase
+      .from("key_requests")
+      .select("*, devices(*)")
+      .eq("status", "pending")
+      .order("requested_at", { ascending: true })
+      .limit(10); // Process in batches
+
+    if (error) {
+      return reply.code(500).send({ error: error.message });
+    }
+
+    const results = [];
+    
+    for (const request of requests || []) {
+      try {
+        // Mark as processing
+        await supabase
+          .from("key_requests")
+          .update({ 
+            status: "processing", 
+            processed_at: new Date().toISOString() 
+          })
+          .eq("id", request.id);
+
+        // Generate device config
+        const result = await wgManager.generateDeviceConfig(
+          request.device_id,
+          request.user_id,
+          request.preferred_node_id
+        );
+
+        // Mark as completed
+        await supabase
+          .from("key_requests")
+          .update({ 
+            status: "completed", 
+            completed_at: new Date().toISOString() 
+          })
+          .eq("id", request.id);
+
+        results.push({
+          request_id: request.id,
+          device_id: request.device_id,
+          status: "completed"
+        });
+
+        req.log.info({ requestId: request.id, deviceId: request.device_id }, "Key request processed");
+
+      } catch (error) {
+        // Mark as failed
+        await supabase
+          .from("key_requests")
+          .update({ 
+            status: "failed",
+            error_message: error.message,
+            processed_at: new Date().toISOString()
+          })
+          .eq("id", request.id);
+
+        results.push({
+          request_id: request.id,
+          device_id: request.device_id,
+          status: "failed",
+          error: error.message
+        });
+
+        req.log.error({ error, requestId: request.id }, "Failed to process key request");
+      }
+    }
+
+    return reply.send({
+      success: true,
+      processed: results.length,
+      results
+    });
+
+  } catch (error) {
+    req.log.error({ error }, "Error processing key requests");
+    return reply.code(500).send({ error: "Failed to process key requests" });
+  }
+});
+
+// Download device config
+app.get("/api/device/:deviceId/config", async (req, reply) => {
+  try {
+    if (!wgManager) {
+      return reply.code(500).send({ error: "WireGuard manager not initialized" });
+    }
+
+    const { deviceId } = req.params;
+
+    // Get device config from database (with RLS protection)
+    const { data: configResult, error } = await supabase.rpc(
+      "get_device_config", 
+      { p_device_id: deviceId }
+    );
+
+    if (error || configResult?.error) {
+      return reply.code(404).send({ 
+        error: configResult?.error || error.message 
+      });
+    }
+
+    // Get full config for generating WireGuard file
+    const { data: fullConfig } = await supabase
+      .from("device_configs")
+      .select(`
+        *,
+        devices(name, platform),
+        vpn_nodes(name, public_ip, port, public_key)
+      `)
+      .eq("device_id", deviceId)
+      .eq("is_active", true)
+      .single();
+
+    if (!fullConfig) {
+      return reply.code(404).send({ error: "Configuration not found" });
+    }
+
+    // Generate WireGuard config file content
+    const wgConfig = wgManager.generateWireGuardConfig(fullConfig, fullConfig.vpn_nodes);
+    
+    // Return as downloadable file
+    const deviceName = fullConfig.devices.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `${deviceName}_sacvpn.conf`;
+    
+    return reply
+      .header('Content-Type', 'text/plain')
+      .header('Content-Disposition', `attachment; filename="${filename}"`)
+      .send(wgConfig);
+
+  } catch (error) {
+    req.log.error({ error, deviceId: req.params.deviceId }, "Error getting device config");
+    return reply.code(500).send({ error: "Failed to get device config" });
+  }
+});
+
+// Get VPN nodes status (public endpoint for frontend)
+app.get("/api/wireguard/nodes", async (req, reply) => {
+  try {
+    if (!supabase) {
+      return reply.code(500).send({ error: "Database not available" });
+    }
+
+    const { data: nodes, error } = await supabase
+      .from("vpn_nodes")
+      .select("id, name, region, public_ip, current_clients, max_clients, is_active, is_healthy")
+      .eq("is_active", true)
+      .order("name");
+
+    if (error) {
+      return reply.code(500).send({ error: error.message });
+    }
+
+    return reply.send({ nodes: nodes || [] });
+
+  } catch (error) {
+    req.log.error({ error }, "Error getting VPN nodes");
+    return reply.code(500).send({ error: "Failed to get VPN nodes" });
+  }
+});
+
+// Admin endpoint: Manual key generation
+app.post("/api/admin/wireguard/generate-key", async (req, reply) => {
+  try {
+    // Check admin authentication
+    const adminEmail = req.headers['x-admin-email'];
+    if (!adminEmail) {
+      return reply.code(401).send({ error: "Admin authentication required" });
+    }
+
+    const { data: isAdmin } = await supabase
+      .from("admin_emails")
+      .select("is_admin")
+      .eq("email", adminEmail)
+      .eq("is_admin", true)
+      .single();
+
+    if (!isAdmin) {
+      return reply.code(403).send({ error: "Admin access required" });
+    }
+
+    if (!wgManager) {
+      return reply.code(500).send({ error: "WireGuard manager not initialized" });
+    }
+
+    const { deviceId, userId, nodeId } = req.body || {};
+
+    if (!deviceId || !userId) {
+      return reply.code(400).send({ error: "deviceId and userId required" });
+    }
+
+    const result = await wgManager.generateDeviceConfig(deviceId, userId, nodeId);
+
+    return reply.send({
+      success: true,
+      config_id: result.config.id,
+      node_id: result.config.node_id,
+      client_ip: result.config.client_ip
+    });
+
+  } catch (error) {
+    req.log.error({ error }, "Error generating admin key");
+    return reply.code(500).send({ error: error.message });
+  }
+});
+
+// Health check endpoint that includes WireGuard status
+app.get("/api/wireguard/health", async (req, reply) => {
+  try {
+    const health = {
+      wg_manager: !!wgManager,
+      database: !!supabase,
+      timestamp: new Date().toISOString()
+    };
+
+    if (wgManager && supabase) {
+      // Get basic stats
+      const { count: totalDevices } = await supabase
+        .from("device_configs")
+        .select("id", { count: "exact" })
+        .eq("is_active", true);
+
+      const { count: totalNodes } = await supabase
+        .from("vpn_nodes")
+        .select("id", { count: "exact" })
+        .eq("is_active", true);
+
+      health.stats = {
+        active_devices: totalDevices || 0,
+        active_nodes: totalNodes || 0
+      };
+    }
+
+    return reply.send(health);
+
+  } catch (error) {
+    req.log.error({ error }, "Error checking WireGuard health");
+    return reply.code(500).send({ error: "Health check failed" });
+  }
+});
 
 // ---- Start ----
 const port = Number(process.env.PORT || 8080);
+
+// Initialize WireGuard manager if available
+if (wgManager) {
+  wgManager.initialize().catch(err => {
+    app.log.error({ error: err }, "Failed to initialize WireGuard manager");
+  });
+}
+
 app
   .listen({ port, host: "0.0.0.0" })
-  .then(() => app.log.info(`✅ API listening on 0.0.0.0:${port}`))
+  .then(() => {
+    app.log.info(`✅ API listening on 0.0.0.0:${port}`);
+    if (wgManager) {
+      app.log.info("🔒 WireGuard manager initialized");
+    }
+  })
   .catch((err) => {
     console.error(err);
     process.exit(1);
