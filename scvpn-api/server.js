@@ -644,3 +644,66 @@ app
     console.error(err);
     process.exit(1);
   });
+
+  app.post("/api/device/:id/request-key", async (req, reply) => {
+  try {
+    if (!wgManager) return reply.code(500).send({ error: "wireguard not configured" });
+    const deviceId = req.params.id;
+    const { user_id, node_id } = req.body || {};
+    if (!user_id) return reply.code(400).send({ error: "missing user_id" });
+
+    const { config, wgConfig } = await wgManager.generateDeviceConfig(deviceId, user_id, node_id || null);
+    return reply.send({ ok: true, config, wgConfig });
+  } catch (err) {
+    req.log.error({ err }, "[device/request-key] failed");
+    return reply.code(500).send({ error: "provisioning failed" });
+  }
+});
+
+// Download WireGuard config for a device
+app.get("/api/device/:id/config", async (req, reply) => {
+  try {
+    if (!wgManager) return reply.code(500).send({ error: "wireguard not configured" });
+    const deviceId = req.params.id;
+
+    const { data: rows, error } = await supabase
+      .from("device_configs")
+      .select("*, vpn_nodes!inner(id, name, public_ip, port, public_key, client_subnet, dns_servers, interface_name)")
+      .eq("device_id", deviceId)
+      .maybeSingle();
+
+    if (error || !rows) return reply.code(404).send({ error: "config not found" });
+    const wgText = wgManager.generateWireGuardConfig(rows, rows.vpn_nodes);
+    reply.header("Content-Type", "text/plain; charset=utf-8");
+    reply.header("Content-Disposition", `attachment; filename=\"sacvpn-${deviceId}.conf\"`);
+    return reply.send(wgText);
+  } catch (err) {
+    req.log.error({ err }, "[device/config] failed");
+    return reply.code(500).send({ error: "failed to render config" });
+  }
+});
+
+// Worker: process pending key_requests
+app.post("/api/wireguard/process-requests", async (req, reply) => {
+  if (!wgManager || !supabase) return reply.code(500).send({ error: "not configured" });
+  const { data: jobs, error } = await supabase
+    .from("key_requests")
+    .select("*")
+    .eq("status", "pending")
+    .limit(50);
+  if (error) return reply.code(500).send({ error: error.message });
+
+  let ok = 0, fail = 0;
+  for (const j of jobs || []) {
+    await supabase.from("key_requests").update({ status: "processing", processed_at: new Date().toISOString() }).eq("id", j.id);
+    try {
+      await wgManager.generateDeviceConfig(j.device_id, j.user_id, j.preferred_node_id || null);
+      ok++;
+      await supabase.from("key_requests").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", j.id);
+    } catch (e) {
+      fail++;
+      await supabase.from("key_requests").update({ status: "failed", error_message: String(e) }).eq("id", j.id);
+    }
+  }
+  return reply.send({ ok, fail });
+});
