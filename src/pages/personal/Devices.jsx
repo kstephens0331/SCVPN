@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import DeviceConfig from "../../components/DeviceConfig";
 
 const PLATFORMS = ["ios","android","macos","windows","linux","router","other"];
 
-export default function PersonalDevices(){  async function requestKey(id){
+export default function PersonalDevices(){
+  const [showConfig, setShowConfig] = useState(null);
+
+  async function requestKey(id){
     try{
       const { error } = await supabase.rpc('request_wg_key', { p_device_id: id });
       if (error) { alert('Failed: ' + error.message); return; }
@@ -144,16 +148,24 @@ export default function PersonalDevices(){  async function requestKey(id){
                 <td className="py-2 pr-3">{d.is_active ? "Yes" : "No"}</td>
                 <td className="py-2 pr-3">{conn[d.id] ? "?" : "�"}</td>
                 <td className="py-2 pr-3 flex gap-3">
-                  <a className="underline" href={`/api/device/${d.id}/config`} target="_blank" rel="noreferrer">Config</a>
+                  <button className="underline text-lime-400" onClick={() => setShowConfig(d)}>View Config</button>
                   <button className="underline" onClick={()=>toggle(d.id, d.is_active)}>{d.is_active? "Suspend" : "Activate"}</button>
                   <button className="underline text-red-300" onClick={()=>removeDevice(d.id)}>Remove</button>
-                  <button className="underline" onClick={() => requestKey(d.id)}>Request key</button>
+                  <button className="underline" onClick={() => requestKey(d.id)}>Request Key</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {showConfig && (
+        <DeviceConfig
+          deviceId={showConfig.id}
+          deviceName={showConfig.name}
+          onClose={() => setShowConfig(null)}
+        />
+      )}
     </div>
   );
 }

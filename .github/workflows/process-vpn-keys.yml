@@ -1,0 +1,31 @@
+name: Process VPN Key Requests
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  # Allow manual triggering
+  workflow_dispatch:
+
+jobs:
+  process-keys:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Process pending VPN key requests
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST https://scvpn-production.up.railway.app/api/wireguard/process-requests)
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" != "200" ]; then
+            echo "Error: Key processing failed"
+            exit 1
+          fi
+
+          # Parse and display results
+          processed=$(echo "$body" | jq -r '.processed // 0')
+          echo "Successfully processed $processed key requests"

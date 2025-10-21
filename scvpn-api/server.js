@@ -4,7 +4,9 @@ import cors from "@fastify/cors";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import fastifyRawBody from "fastify-raw-body";
+import QRCode from "qrcode";
 import { WireGuardManager } from "./wireguard-manager.js";
+import { EmailService } from "./email-service.js";
 
 // ---- Env ----
 const {
@@ -26,7 +28,10 @@ const {
   // Supabase (optional here)
   SCVPN_SUPABASE_URL,
   SCVPN_SUPABASE_SERVICE_KEY,
-  STRIPE_WEBHOOK_SECRET
+  STRIPE_WEBHOOK_SECRET,
+
+  // Email
+  RESEND_API_KEY
 } = process.env;
 
 // ---- Helpers / constants used later ----
@@ -56,6 +61,9 @@ async function init() {
 
   // Initialize WireGuard Manager
   const wgManager = supabase ? new WireGuardManager(supabase, app.log) : null;
+
+  // Initialize Email Service
+  const emailService = new EmailService(RESEND_API_KEY, app.log);
 
   // ---- CORS allow-list ----
   const ALLOW = new Set(
@@ -409,6 +417,37 @@ async function init() {
             })
             .eq("id", request.id);
 
+          // Send email notification with QR code
+          try {
+            // Generate QR code from config
+            const qrCodeDataURL = await QRCode.toDataURL(result.wgConfig, {
+              errorCorrectionLevel: 'M',
+              type: 'image/png',
+              width: 400,
+              margin: 2
+            });
+
+            // Get user email from profiles
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("email, full_name")
+              .eq("id", request.user_id)
+              .single();
+
+            if (profile?.email) {
+              await emailService.sendVPNSetupEmail({
+                userEmail: profile.email,
+                userName: profile.full_name,
+                deviceName: request.devices?.name || 'Your Device',
+                wgConfig: result.wgConfig,
+                qrCodeDataURL
+              });
+              req.log.info({ userId: request.user_id, email: profile.email }, "Setup email sent");
+            }
+          } catch (emailError) {
+            req.log.warn({ error: emailError }, "Failed to send email, but key generation succeeded");
+          }
+
           results.push({
             request_id: request.id,
             device_id: request.device_id,
@@ -502,6 +541,60 @@ async function init() {
     } catch (error) {
       req.log.error({ error, deviceId: req.params.deviceId }, "Error getting device config");
       return reply.code(500).send({ error: "Failed to get device config" });
+    }
+  });
+
+  // Get device config data with QR code (for frontend display)
+  app.get("/api/device/:deviceId/config-data", async (req, reply) => {
+    try {
+      if (!wgManager) {
+        return reply.code(500).send({ error: "WireGuard manager not initialized" });
+      }
+
+      const { deviceId } = req.params;
+
+      // Get full config from database
+      const { data: fullConfig } = await supabase
+        .from("device_configs")
+        .select(`
+          *,
+          devices(name, platform),
+          vpn_nodes(name, public_ip, port, public_key, region)
+        `)
+        .eq("device_id", deviceId)
+        .eq("is_active", true)
+        .single();
+
+      if (!fullConfig) {
+        return reply.code(404).send({ error: "Configuration not found" });
+      }
+
+      // Generate WireGuard config text
+      const wgConfig = wgManager.generateWireGuardConfig(fullConfig, fullConfig.vpn_nodes);
+
+      // Generate QR code
+      const qrCode = await QRCode.toDataURL(wgConfig, {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        width: 400,
+        margin: 2
+      });
+
+      return reply.send({
+        deviceName: fullConfig.devices?.name || 'Device',
+        platform: fullConfig.devices?.platform || 'unknown',
+        nodeName: fullConfig.vpn_nodes?.name || 'VPN Node',
+        nodeRegion: fullConfig.vpn_nodes?.region || 'unknown',
+        clientIp: fullConfig.client_ip,
+        serverIp: fullConfig.vpn_nodes?.public_ip,
+        configText: wgConfig,
+        qrCode: qrCode,
+        createdAt: fullConfig.created_at
+      });
+
+    } catch (error) {
+      req.log.error({ error, deviceId: req.params.deviceId }, "Error getting config data");
+      return reply.code(500).send({ error: "Failed to get config data" });
     }
   });
 

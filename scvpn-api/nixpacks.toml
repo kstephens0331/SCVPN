@@ -1,6 +1,7 @@
 # scvpn-web/api/nixpacks.toml
 [phases.setup]
 nixPkgs = ["nodejs_20"]
+aptPkgs = ["sshpass", "wireguard-tools", "openssh-client"]
 
 [phases.install]
 cmds = ["npm ci --omit=dev"]
