@@ -413,12 +413,40 @@ async function init() {
           message: subError.message,
           details: subError.details,
           hint: subError.hint
-        }, "[claim] Failed to save subscription - detailed error");
-        return reply.code(500).send({
-          error: "Failed to save subscription",
-          details: subError.message,
-          hint: subError.hint
-        });
+        }, "[claim] Failed to save subscription with client - trying raw SQL");
+
+        // Fallback: Try raw SQL insert (bypasses RLS and client issues)
+        try {
+          const { data: sqlResult, error: sqlError } = await supabase.rpc('insert_subscription', {
+            p_stripe_subscription_id: subscription.id,
+            p_stripe_customer_id: subscription.customer,
+            p_user_id: userId,
+            p_plan: plan_code || 'unknown',
+            p_status: subscription.status,
+            p_current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            p_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            p_renews_at: subscription.cancel_at_period_end ? null : new Date(subscription.current_period_end * 1000).toISOString()
+          });
+
+          if (sqlError) {
+            app.log.error({ sqlError }, "[claim] Raw SQL insert also failed");
+            return reply.code(500).send({
+              error: "Failed to save subscription",
+              details: subError.message,
+              sqlDetails: sqlError.message
+            });
+          }
+
+          app.log.info({ userId, subId: subscription.id }, "[claim] Subscription saved via raw SQL");
+          subData = sqlResult;
+        } catch (fallbackError) {
+          app.log.error({ fallbackError }, "[claim] Fallback SQL failed");
+          return reply.code(500).send({
+            error: "Failed to save subscription",
+            details: subError.message,
+            hint: subError.hint
+          });
+        }
       }
 
       app.log.info({ userId, subId: subscription.id, plan: plan_code, subData }, "[claim] Subscription linked to user");
