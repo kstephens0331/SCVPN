@@ -16,7 +16,8 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(EDITOR=\"cat\" git rebase:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

@@ -24,6 +24,12 @@ export default function Overview(){
       supabase.from("device_latest_telemetry").select("device_id,is_connected"),
       supabase.from("telemetry").select("ts,rx_bytes,tx_bytes").gte("ts", new Date(Date.now()-24*60*60*1000).toISOString())
     ]).then(([u,o,d,t,tele])=>{
+      console.log("[Admin Overview] Profiles:", u.count, "error:", u.error);
+      console.log("[Admin Overview] Organizations:", o.count, "error:", o.error);
+      console.log("[Admin Overview] Devices:", d.count, "error:", d.error);
+      console.log("[Admin Overview] Device telemetry:", t.data?.length, "error:", t.error);
+      console.log("[Admin Overview] Telemetry:", tele.data?.length, "error:", tele.error);
+
       setStats({
         users: u.count||0,
         orgs: o.count||0,
