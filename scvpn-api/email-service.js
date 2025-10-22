@@ -12,14 +12,27 @@ export class EmailService {
     if (smtpConfig?.user && smtpConfig?.pass) {
       this.transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
-        port: 587,
-        secure: false, // Use STARTTLS
+        port: 465, // Use SSL port instead of STARTTLS (more reliable on Railway)
+        secure: true, // Use SSL
         auth: {
           user: smtpConfig.user,
           pass: smtpConfig.pass, // Use App Password, not regular password
         },
+        // Add timeouts to prevent hanging
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+        // Add retry logic
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
       });
-      this.logger.info({ user: smtpConfig.user }, 'Email service initialized with Google SMTP');
+      this.logger.info({
+        user: smtpConfig.user,
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true
+      }, 'Email service initialized with Google SMTP (SSL)');
     } else {
       this.transporter = null;
       this.logger.warn('Email service not configured - SMTP credentials missing');
