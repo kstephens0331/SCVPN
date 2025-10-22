@@ -1,18 +1,34 @@
 // Email service for VPN setup notifications
-// Uses Resend.com for reliable email delivery
+// Uses nodemailer with Google SMTP
 
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 export class EmailService {
-  constructor(apiKey, logger) {
-    this.resend = apiKey ? new Resend(apiKey) : null;
+  constructor(smtpConfig, logger) {
     this.logger = logger;
-    this.fromEmail = 'SACVPN <noreply@sacvpn.com>'; // Update with your verified domain
+    this.fromEmail = 'SACVPN <info@stephenscode.dev>';
+
+    // Create nodemailer transporter with Google SMTP
+    if (smtpConfig?.user && smtpConfig?.pass) {
+      this.transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false, // Use STARTTLS
+        auth: {
+          user: smtpConfig.user,
+          pass: smtpConfig.pass, // Use App Password, not regular password
+        },
+      });
+      this.logger.info({ user: smtpConfig.user }, 'Email service initialized with Google SMTP');
+    } else {
+      this.transporter = null;
+      this.logger.warn('Email service not configured - SMTP credentials missing');
+    }
   }
 
   // Send VPN setup email with config file and QR code
   async sendVPNSetupEmail({ userEmail, userName, deviceName, wgConfig, qrCodeDataURL }) {
-    if (!this.resend) {
+    if (!this.transporter) {
       this.logger.warn('Email service not configured - skipping email');
       return { success: false, error: 'Email service not configured' };
     }
@@ -24,29 +40,26 @@ export class EmailService {
         ? this.getMobileSetupEmail(userName, deviceName, qrCodeDataURL, wgConfig)
         : this.getDesktopSetupEmail(userName, deviceName, wgConfig);
 
-      const { data, error } = await this.resend.emails.send({
+      const mailOptions = {
         from: this.fromEmail,
-        to: [userEmail],
+        to: userEmail,
         subject: `Your ${deviceName} VPN is Ready! 🔒`,
         html: emailHtml,
         attachments: [
           {
             filename: `${this.sanitizeFilename(deviceName)}_sacvpn.conf`,
-            content: Buffer.from(wgConfig).toString('base64'),
+            content: wgConfig,
           }
         ]
-      });
+      };
 
-      if (error) {
-        this.logger.error({ error }, 'Failed to send email');
-        return { success: false, error: error.message };
-      }
+      const info = await this.transporter.sendMail(mailOptions);
 
-      this.logger.info({ emailId: data.id, to: userEmail }, 'VPN setup email sent');
-      return { success: true, emailId: data.id };
+      this.logger.info({ messageId: info.messageId, to: userEmail }, 'VPN setup email sent');
+      return { success: true, messageId: info.messageId };
 
     } catch (error) {
-      this.logger.error({ error }, 'Email sending failed');
+      this.logger.error({ error: error.message }, 'Email sending failed');
       return { success: false, error: error.message };
     }
   }

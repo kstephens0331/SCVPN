@@ -30,8 +30,9 @@ const {
   SCVPN_SUPABASE_SERVICE_KEY,
   STRIPE_WEBHOOK_SECRET,
 
-  // Email
-  RESEND_API_KEY
+  // Email (Google SMTP)
+  SMTP_USER,
+  SMTP_PASS
 } = process.env;
 
 // ---- Helpers / constants used later ----
@@ -62,8 +63,11 @@ async function init() {
   // Initialize WireGuard Manager
   const wgManager = supabase ? new WireGuardManager(supabase, app.log) : null;
 
-  // Initialize Email Service
-  const emailService = new EmailService(RESEND_API_KEY, app.log);
+  // Initialize Email Service with Google SMTP
+  const emailService = new EmailService(
+    { user: SMTP_USER, pass: SMTP_PASS },
+    app.log
+  );
 
   // ---- CORS allow-list ----
   const ALLOW = new Set(
