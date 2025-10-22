@@ -63,23 +63,41 @@ export class WireGuardManager {
     });
   }
 
-  // Assign user to best available node - OPTIMIZED FOR LOW LATENCY
+  // Assign user to best available node
+  // Strategy: Dallas handles quick connects until 80% full, then VA Primary takes over
   selectBestNode(userRegion = 'us-east', userLocation = null) {
     const availableNodes = Array.from(this.nodes.values())
       .filter(node => node.is_active && node.current_clients < node.max_clients);
-    
+
     if (availableNodes.length === 0) {
       throw new Error('No available VPN nodes');
     }
 
-    // PRIORITY 1: VA Primary (lowest latency) - prefer this unless at capacity
-    const vaPrimary = availableNodes.find(n => n.name === 'SACVPN-VA-Primary');
-    if (vaPrimary && vaPrimary.current_clients < (vaPrimary.max_clients * 0.85)) {
-      this.logger.info({ node: vaPrimary.name }, "Selected VA Primary for low latency");
+    // Find Dallas and VA nodes
+    const dallasCentral = availableNodes.find(n => n.name === 'SACVPN-Dallas-Central' || n.priority === 2);
+    const vaPrimary = availableNodes.find(n => n.name === 'SACVPN-VA-Primary' || n.priority === 1);
+
+    // STRATEGY: Dallas handles quick connects and small traffic until 80% capacity
+    if (dallasCentral && dallasCentral.current_clients < (dallasCentral.max_clients * 0.80)) {
+      this.logger.info({
+        node: dallasCentral.name,
+        load: `${dallasCentral.current_clients}/${dallasCentral.max_clients}`,
+        capacity: `${((dallasCentral.current_clients / dallasCentral.max_clients) * 100).toFixed(1)}%`
+      }, "Selected Dallas Central for quick connect (under 80% capacity)");
+      return dallasCentral;
+    }
+
+    // Dallas is at/over 80% capacity - use VA Primary
+    if (vaPrimary) {
+      this.logger.info({
+        node: vaPrimary.name,
+        load: `${vaPrimary.current_clients}/${vaPrimary.max_clients}`,
+        reason: dallasCentral ? 'Dallas at 80%+ capacity' : 'Dallas unavailable'
+      }, "Selected VA Primary (overflow from Dallas)");
       return vaPrimary;
     }
 
-    // PRIORITY 2: Sort by priority, then by load
+    // Fallback: Sort by priority, then by load
     const sortedNodes = availableNodes.sort((a, b) => {
       // First by priority (lower number = higher priority)
       if (a.priority !== b.priority) {
@@ -90,11 +108,11 @@ export class WireGuardManager {
     });
 
     const selectedNode = sortedNodes[0];
-    this.logger.info({ 
-      node: selectedNode.name, 
+    this.logger.info({
+      node: selectedNode.name,
       load: `${selectedNode.current_clients}/${selectedNode.max_clients}`,
       priority: selectedNode.priority
-    }, "Selected VPN node");
+    }, "Selected VPN node (fallback)");
 
     return selectedNode;
   }

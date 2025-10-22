@@ -2,6 +2,25 @@
 
 This guide will set up server metrics and WireGuard telemetry collection for your admin dashboard.
 
+## VPN Node Strategy
+
+Your VPN infrastructure uses a two-tier approach:
+
+1. **Dallas Central (Priority 2)** - Quick connect / Overflow node
+   - Handles ALL new connections initially
+   - Optimal for quick connects and small traffic (web browsing, etc.)
+   - Continues handling traffic until it reaches **80% capacity** (800/1000 clients)
+
+2. **VA Primary (Priority 1)** - Main production node
+   - Takes over once Dallas reaches 80% capacity
+   - All NEW traffic routes to VA after Dallas overflow
+   - Primary node for high-capacity and overflow traffic
+
+**Node Selection Logic:**
+- Client connects → Assigned to Dallas Central (if under 80% capacity)
+- Dallas reaches 800 clients → New clients go to VA Primary
+- Dallas stays active for existing clients, VA handles all new connections
+
 ## Issue Summary
 
 Currently, the admin dashboard is missing:
@@ -68,7 +87,7 @@ EOF
 # Make scripts executable
 sudo chmod +x /opt/sacvpn/*.sh
 
-# Set environment variables
+# Set environment variables for VA Primary
 echo 'export SCVPN_SUPABASE_URL="https://ltwuqjmncldopkutiyak.supabase.co"' | sudo tee -a /etc/environment
 echo 'export SCVPN_SUPABASE_SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0d3Vxam1uY2xkb3BrdXRpeWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTgyOTk0NCwiZXhwIjoyMDcxNDA1OTQ0fQ.J0GjiUMfB5dtO6QItZvtQiSduNRLWZDcW5gDZL91fIc"' | sudo tee -a /etc/environment
 echo 'export HOST_NAME="VA Primary"' | sudo tee -a /etc/environment
@@ -95,7 +114,7 @@ EOF
 # Make scripts executable
 chmod +x /opt/sacvpn/*.sh
 
-# Set environment variables
+# Set environment variables for Dallas Central
 echo 'export SCVPN_SUPABASE_URL="https://ltwuqjmncldopkutiyak.supabase.co"' | tee -a /etc/environment
 echo 'export SCVPN_SUPABASE_SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0d3Vxam1uY2xkb3BrdXRpeWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTgyOTk0NCwiZXhwIjoyMDcxNDA1OTQ0fQ.J0GjiUMfB5dtO6QItZvtQiSduNRLWZDcW5gDZL91fIc"' | tee -a /etc/environment
 echo 'export HOST_NAME="Dallas Central"' | tee -a /etc/environment
