@@ -59,14 +59,19 @@ export default function useAuthRedirect() {
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (evt, sess) => {
       console.log("[useAuthRedirect] Auth state changed:", evt, "has session:", !!sess);
+      console.log("[useAuthRedirect] Current pathname:", loc.pathname, "is public?", PUBLIC_PATHS.has(loc.pathname));
       if (!sess) return;
       if (PUBLIC_PATHS.has(loc.pathname)) {
+        console.log("[useAuthRedirect] On public path, fetching role...");
         const next = new URLSearchParams(loc.search).get("next");
         const role = await getRole();
+        console.log("[useAuthRedirect] Got role:", role);
         const fallback = roleToDefault(role);
         const target = (next && next.startsWith("/")) ? next : fallback;
         console.log("[useAuthRedirect] Auth change - navigating to:", target);
         nav(target, { replace: true });
+      } else {
+        console.log("[useAuthRedirect] Not on public path, skipping redirect");
       }
     });
 
