@@ -16,25 +16,42 @@ export default function PersonalDevices(){
         return;
       }
 
-      // Call new immediate key generation endpoint
-      const response = await fetch(`${import.meta.env.VITE_API_BASE}/api/wireguard/generate-key`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ device_id: id })
-      });
+      // Try new immediate key generation endpoint
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE}/api/wireguard/generate-key`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ device_id: id })
+        });
 
-      const result = await response.json();
+        // If endpoint exists and returns JSON
+        if (response.ok || response.status !== 405) {
+          const result = await response.json();
 
-      if (!response.ok) {
-        alert('Failed: ' + (result.error || 'Unknown error'));
-        return;
+          if (!response.ok) {
+            alert('Failed: ' + (result.error || 'Unknown error'));
+            return;
+          }
+
+          alert('✅ WireGuard keys generated! Check your email for setup instructions.');
+          await load();
+          return;
+        }
+      } catch (fetchError) {
+        console.warn('New endpoint not available, falling back to RPC:', fetchError);
       }
 
-      alert('✅ WireGuard keys generated! Check your email for setup instructions.');
-      await load(); // Reload devices to show updated status
+      // Fallback: Use old RPC method if new endpoint doesn't exist
+      const { error } = await supabase.rpc('request_wg_key', { p_device_id: id });
+      if (error) {
+        alert('Failed: ' + error.message);
+        return;
+      }
+      alert('Key request submitted. Keys will be processed shortly. Check your email.');
+      await load();
     }catch(e){
       alert('Error: ' + (e?.message ?? e));
     }
