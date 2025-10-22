@@ -319,6 +319,50 @@ async function init() {
     }
   });
 
+  // Billing management - redirect to Stripe Customer Portal
+  app.get("/api/billing/manage", async (req, reply) => {
+    try {
+      if (!requireStripe(reply)) return;
+      if (!supabase) return reply.code(500).send({ error: "supabase service not configured" });
+
+      // Get current user from session
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return reply.code(401).send({ error: "Unauthorized" });
+      }
+
+      const token = authHeader.substring(7);
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+      if (authError || !user) {
+        return reply.code(401).send({ error: "Invalid token" });
+      }
+
+      // Find customer's Stripe customer ID from subscriptions table
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("stripe_customer_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!sub?.stripe_customer_id) {
+        return reply.code(404).send({ error: "No active subscription found" });
+      }
+
+      // Create Stripe Customer Portal session
+      const session = await stripe.billingPortal.sessions.create({
+        customer: sub.stripe_customer_id,
+        return_url: `${SITE_URL}/app/personal/billing`,
+      });
+
+      // Redirect to Stripe Portal
+      return reply.redirect(303, session.url);
+    } catch (err) {
+      req.log.error({ err }, "[billing/manage] error");
+      return reply.code(500).send({ error: "Failed to create billing portal session" });
+    }
+  });
+
   app.post("/api/stripe/webhook", { config: { rawBody: true } }, async (req, reply) => {
     try {
       if (!requireStripe(reply)) return;
