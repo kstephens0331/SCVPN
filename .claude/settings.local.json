@@ -12,7 +12,9 @@
       "Bash(node simple-setup.js:*)",
       "Bash(python -m json.tool:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

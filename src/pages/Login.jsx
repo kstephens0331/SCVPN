@@ -21,9 +21,15 @@ export default function Login(){
     e.preventDefault()
     setErr("")
     setLoading(true)
+    console.log("[Login] Attempting sign in for:", email);
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
-    if (error) { setErr(error.message); return }
+    if (error) {
+      console.error("[Login] Sign in error:", error);
+      setErr(error.message);
+      return
+    }
+    console.log("[Login] Sign in successful, refreshing auth state...");
     await refresh()
     // Respect ?next=, otherwise choose a role-based default
     const params = new URLSearchParams(loc.search);
@@ -31,6 +37,7 @@ export default function Login(){
 
     // fetch role
     const { data: { user } } = await supabase.auth.getUser();
+    console.log("[Login] Fetched user:", user?.email);
     let role = "client";
     if (user) {
       const { data } = await supabase
@@ -38,6 +45,7 @@ export default function Login(){
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
+      console.log("[Login] Profile data:", data);
       if (data?.role) role = data.role;
     }
     const roleToDefault = (r) =>
@@ -46,7 +54,9 @@ export default function Login(){
       "/app/personal/overview";
 
     const to = (next && next.startsWith("/")) ? next : roleToDefault(role);
+    console.log("[Login] Determined role:", role, "navigating to:", to);
     nav(to, { replace: true });
+    console.log("[Login] Navigation called");
   }
 
   return (
