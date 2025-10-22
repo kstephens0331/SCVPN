@@ -1,12 +1,10 @@
 import { useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { supabase } from "../lib/supabase"
-import { useAuth } from "../store/auth"
 
 export default function Login(){
   const nav = useNavigate()
   const loc = useLocation()
-  const { refresh } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [err, setErr] = useState("")
@@ -22,20 +20,54 @@ export default function Login(){
     setErr("")
     setLoading(true)
     console.log("[Login] Attempting sign in for:", email);
+    
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    
     if (error) {
       console.error("[Login] Sign in error:", error);
       setErr(error.message);
       setLoading(false)
       return
     }
-    console.log("[Login] Sign in successful - useAuthRedirect will handle navigation");
-    // Don't set loading to false or manually navigate
-    // useAuthRedirect's onAuthStateChange will trigger and handle the redirect
+    
+    console.log("[Login] Sign in successful, fetching user role...");
+    
+    // Fetch user and role to determine where to redirect
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      setErr("Failed to get user data");
+      setLoading(false);
+      return;
+    }
+    
+    console.log("[Login] User:", user.email);
+    
+    // Get role from profiles table
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    
+    const role = profileData?.role || "client";
+    console.log("[Login] Role:", role);
+    
+    // Determine redirect target
+    const next = new URLSearchParams(loc.search).get("next");
+    
+    const roleToDefault = (r) =>
+      r === "admin" ? "/admin" :
+      r === "business" ? "/app/business/overview" :
+      "/app/personal/overview";
+    
+    const target = (next && next.startsWith("/")) ? next : roleToDefault(role);
+    
+    console.log("[Login] Navigating to:", target);
+    nav(target, { replace: true });
   }
 
   return (
-    // FIX: full-screen fixed overlay, centers content no matter what parent does
     <div className="fixed inset-0 z-[9999] w-screen h-screen bg-black text-lime-400 flex items-center justify-center">
       <div className="w-full max-w-md px-6">
         <h1 className="text-4xl sm:text-5xl font-extrabold mb-6 text-center">Sign in</h1>
