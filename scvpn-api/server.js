@@ -638,21 +638,27 @@ async function init() {
   // Generate WireGuard key immediately for a device (called from frontend)
   app.post("/api/wireguard/generate-key", async (req, reply) => {
     try {
+      app.log.info({ body: req.body }, "🔑 [generate-key] ENDPOINT HIT - Request received");
+
       if (!wgManager) {
+        app.log.error("🔑 [generate-key] WireGuard manager not initialized");
         return reply.code(500).send({ error: "WireGuard manager not initialized" });
       }
       if (!supabase) {
+        app.log.error("🔑 [generate-key] Supabase not initialized");
         return reply.code(500).send({ error: "Supabase not initialized" });
       }
 
       const { device_id } = req.body || {};
       if (!device_id) {
+        app.log.warn("🔑 [generate-key] Missing device_id in request");
         return reply.code(400).send({ error: "Missing device_id" });
       }
 
       // Get authenticated user
       const authHeader = req.headers.authorization;
       if (!authHeader) {
+        app.log.warn("🔑 [generate-key] Missing authorization header");
         return reply.code(401).send({ error: "Missing authorization" });
       }
 
@@ -660,8 +666,11 @@ async function init() {
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
       if (authError || !user) {
+        app.log.warn({ authError }, "🔑 [generate-key] Unauthorized");
         return reply.code(401).send({ error: "Unauthorized" });
       }
+
+      app.log.info({ userId: user.id, deviceId: device_id }, "🔑 [generate-key] User authenticated");
 
       // Verify device belongs to user
       const { data: device, error: deviceError } = await supabase
@@ -672,17 +681,20 @@ async function init() {
         .single();
 
       if (deviceError || !device) {
+        app.log.warn({ deviceError, device_id }, "🔑 [generate-key] Device not found");
         return reply.code(404).send({ error: "Device not found or access denied" });
       }
 
       // Generate WireGuard config
-      req.log.info({ deviceId: device_id, userId: user.id }, "Generating WireGuard keys");
+      app.log.info({ deviceId: device_id, userId: user.id, deviceName: device.name }, "🔑 [generate-key] ✅ Starting WireGuard key generation - SSH commands should follow");
 
       const result = await wgManager.generateDeviceConfig(
         device_id,
         user.id,
         null // Let system choose best node
       );
+
+      app.log.info({ configId: result.config.id, nodeId: result.config.node_id }, "🔑 [generate-key] ✅ Key generation completed successfully");
 
       // Send email with config and QR code
       try {
@@ -727,7 +739,11 @@ async function init() {
       });
 
     } catch (error) {
-      req.log.error({ error: error.message }, "Failed to generate WireGuard key");
+      app.log.error({
+        error: error.message,
+        stack: error.stack,
+        deviceId: req.body?.device_id
+      }, "🔑 [generate-key] ❌ FAILED to generate WireGuard key");
       return reply.code(500).send({ error: error.message || "Failed to generate keys" });
     }
   });
