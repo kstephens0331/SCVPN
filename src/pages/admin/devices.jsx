@@ -15,17 +15,34 @@ async function adminAction(action, deviceId){
 
 export default function Devices(){
   const [rows, setRows] = useState([])
-  const load = ()=> supabase.from("devices").select("id,name,platform,is_active,user_id,org_id").then(({data})=>setRows(data||[]))
+  const load = ()=> {
+    // Join with profiles and organizations to get names/emails
+    supabase.from("devices")
+      .select(`
+        id,
+        name,
+        platform,
+        is_active,
+        user_id,
+        org_id,
+        profiles!user_id(email),
+        organizations!org_id(name)
+      `)
+      .then(({data, error})=> {
+        console.log("[Devices] Data:", data, "error:", error);
+        setRows(data||[]);
+      });
+  }
   useEffect(()=>{ load() },[])
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="text-left border-b">
-            <th className="py-2 pr-3">Name</th>
+            <th className="py-2 pr-3">Device Name</th>
             <th className="py-2 pr-3">Platform</th>
             <th className="py-2 pr-3">Active</th>
-            <th className="py-2 pr-3">User/Org</th>
+            <th className="py-2 pr-3">Owner</th>
             <th className="py-2 pr-3">Actions</th>
           </tr>
         </thead>
@@ -35,7 +52,15 @@ export default function Devices(){
               <td className="py-2 pr-3">{d.name}</td>
               <td className="py-2 pr-3">{d.platform}</td>
               <td className="py-2 pr-3">{d.is_active?'Yes':'No'}</td>
-              <td className="py-2 pr-3">{d.org_id?`Org:${d.org_id}`:`User:${d.user_id}`}</td>
+              <td className="py-2 pr-3">
+                {d.organizations ? (
+                  <span className="text-lime-300">{d.organizations.name} <span className="text-gray-500">(Business)</span></span>
+                ) : d.profiles ? (
+                  <span className="text-lime-400">{d.profiles.email}</span>
+                ) : (
+                  <span className="text-gray-500">Unknown</span>
+                )}
+              </td>
               <td className="py-2 pr-3 flex gap-2">
                 <button className="underline" onClick={async()=>{ await adminAction("activate", d.id); load() }}>Activate</button>
                 <button className="underline" onClick={async()=>{ await adminAction("suspend", d.id); load() }}>Suspend</button>
