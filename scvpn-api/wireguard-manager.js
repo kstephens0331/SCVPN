@@ -237,16 +237,20 @@ export class WireGuardManager {
   // Execute SSH command on node
   async executeSSHCommand(node, command) {
     return new Promise((resolve, reject) => {
+      const SSH_TIMEOUT = 15000; // 15 seconds timeout
+
       // For now, we'll use sshpass for password authentication
       // In production, you should set up SSH key authentication
       const password = process.env.VPN_NODE_SSH_PASSWORD;
-      
+
       let sshCmd;
       if (password) {
         sshCmd = [
           'sshpass', '-p', password, 'ssh',
+          '-o', 'ConnectTimeout=10',
           '-o', 'StrictHostKeyChecking=no',
           '-o', 'UserKnownHostsFile=/dev/null',
+          '-o', 'BatchMode=no',
           `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}`,
           command
         ];
@@ -254,6 +258,7 @@ export class WireGuardManager {
         // Fallback to key-based auth
         sshCmd = [
           'ssh',
+          '-o', 'ConnectTimeout=10',
           '-o', 'StrictHostKeyChecking=no',
           '-o', 'UserKnownHostsFile=/dev/null',
           '-i', process.env.VPN_NODE_SSH_KEY_PATH || '~/.ssh/vpn_nodes',
@@ -262,19 +267,58 @@ export class WireGuardManager {
         ];
       }
 
-      const proc = spawn(sshCmd[0], sshCmd.slice(1), { stdio: ['pipe', 'pipe', 'pipe'] });
-      
+      this.logger.info({
+        node: node.name,
+        host: `${node.ssh_user}@${node.ssh_host}`,
+        command
+      }, "Executing SSH command");
+
+      let proc;
+      try {
+        proc = spawn(sshCmd[0], sshCmd.slice(1), { stdio: ['pipe', 'pipe', 'pipe'] });
+      } catch (err) {
+        this.logger.error({ err, cmd: sshCmd[0] }, "Failed to spawn SSH process - command not found?");
+        return reject(new Error(`Failed to execute ${sshCmd[0]}: ${err.message}. Is sshpass installed?`));
+      }
+
       let stdout = '';
       let stderr = '';
-      
+      let timedOut = false;
+
+      // Set timeout to kill process if it hangs
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        this.logger.warn({ node: node.name }, "SSH command timed out, killing process");
+        proc.kill('SIGTERM');
+        setTimeout(() => proc.kill('SIGKILL'), 2000); // Force kill after 2s
+      }, SSH_TIMEOUT);
+
       proc.stdout.on('data', (data) => stdout += data.toString());
       proc.stderr.on('data', (data) => stderr += data.toString());
-      
+
+      proc.on('error', (err) => {
+        clearTimeout(timeout);
+        this.logger.error({ err, node: node.name }, "SSH process error");
+        reject(new Error(`SSH process error: ${err.message}`));
+      });
+
       proc.on('close', (code) => {
-        if (code === 0) {
+        clearTimeout(timeout);
+
+        if (timedOut) {
+          this.logger.error({ node: node.name, command }, "SSH command timed out");
+          reject(new Error(`SSH command timed out after ${SSH_TIMEOUT}ms`));
+        } else if (code === 0) {
+          this.logger.info({ node: node.name }, "SSH command successful");
           resolve(stdout);
         } else {
-          reject(new Error(`SSH command failed: ${stderr}`));
+          this.logger.error({
+            node: node.name,
+            code,
+            stderr,
+            stdout
+          }, "SSH command failed");
+          reject(new Error(`SSH command failed (exit ${code}): ${stderr || stdout}`));
         }
       });
     });
