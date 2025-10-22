@@ -223,6 +223,16 @@ async function init() {
           account_type,
           quantity: String(quantity),
         },
+        subscription_data: {
+          metadata: {
+            plan_code,
+            plan_label,
+            billing_period,
+            account_type,
+            quantity: String(quantity),
+            // user_id will be added after user claims the subscription in post-checkout
+          },
+        },
       });
 
       return reply.send({ url: session.url });
@@ -405,10 +415,58 @@ async function init() {
           break;
         }
         case "customer.subscription.created":
-        case "customer.subscription.updated":
-        case "customer.subscription.deleted":
-          app.log.info({ id: event.id, type: event.type }, "[webhook] subscription change");
+        case "customer.subscription.updated": {
+          if (supabase) {
+            const sub = event.data.object;
+            const userId = sub.metadata?.user_id;
+
+            if (!userId) {
+              app.log.warn({ subId: sub.id }, "[webhook] subscription missing user_id metadata");
+              break;
+            }
+
+            const { error } = await supabase
+              .from("subscriptions")
+              .upsert({
+                stripe_subscription_id: sub.id,
+                stripe_customer_id: sub.customer,
+                user_id: userId,
+                plan: sub.metadata?.plan_code || "unknown",
+                status: sub.status,
+                current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
+                current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+                renews_at: sub.cancel_at_period_end ? null : new Date(sub.current_period_end * 1000).toISOString(),
+                updated_at: new Date().toISOString(),
+              }, { onConflict: "stripe_subscription_id" });
+
+            if (error) {
+              app.log.error({ error, subId: sub.id }, "[webhook] upsert subscription failed");
+            } else {
+              app.log.info({ subId: sub.id, userId, status: sub.status }, "[webhook] subscription saved");
+            }
+          }
           break;
+        }
+        case "customer.subscription.deleted": {
+          if (supabase) {
+            const sub = event.data.object;
+            const { error } = await supabase
+              .from("subscriptions")
+              .update({
+                status: "canceled",
+                renews_at: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("stripe_subscription_id", sub.id);
+
+            if (error) {
+              app.log.error({ error, subId: sub.id }, "[webhook] cancel subscription failed");
+            } else {
+              app.log.info({ subId: sub.id }, "[webhook] subscription canceled");
+            }
+          }
+          break;
+        }
         default:
           app.log.info({ type: event.type }, "[webhook] unhandled");
       }
