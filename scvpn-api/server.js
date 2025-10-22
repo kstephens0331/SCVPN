@@ -577,6 +577,12 @@ async function init() {
               break;
             }
 
+            // Validate timestamps before converting
+            if (!sub.current_period_start || !sub.current_period_end) {
+              app.log.warn({ subId: sub.id }, "[webhook] subscription missing period timestamps");
+              break;
+            }
+
             const { error } = await supabase
               .from("subscriptions")
               .upsert({
