@@ -87,7 +87,7 @@ INSERT INTO vpn_nodes (
   '45.79.8.145',
   51820,
   'wg0',
-  '[DALLAS_PUBLIC_KEY_HERE]',
+  'QiEacNqmDhBpIcGCBFsYlZwo39pkqNMTiCiyYTgma34=',
   '10.71.0.0/24',
   '1.1.1.1,8.8.8.8',
   1000,
