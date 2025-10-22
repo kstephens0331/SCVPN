@@ -2,10 +2,10 @@ export const PLANS = {
   personal: {
     code: "personal",
     name: "Personal",
-    price: 7.99,
+    price: 9.99,
     interval: "month",
     devices: "Unlimited",
-    stripePriceId: "price_PERSONAL_MONTHLY",
+    stripePriceId: "price_1SL6ArDcTrtfdJcSCdOK5tBa",
     features: [
       "Protect all your personal devices at home",
       "Stream and browse privately without ISP throttling",
@@ -16,10 +16,10 @@ export const PLANS = {
     badge: "Most Popular",
     code: "gaming",
     name: "Gaming",
-    price: 11.99,
+    price: 14.99,
     interval: "month",
     devices: "Unlimited",
-    stripePriceId: "price_GAMING_MONTHLY",
+    stripePriceId: "price_1SL6EeDcTrtfdJcSrQ5XO4vb",
     features: [
       "Low-latency gaming-optimized routes",
       "DDoS protection for competitive play",
@@ -29,10 +29,10 @@ export const PLANS = {
   business10: {
     code: "business10",
     name: "Business 10",
-    price: 50,
+    price: 59.99,
     interval: "month",
     devices: 10,
-    stripePriceId: "price_BUS_10",
+    stripePriceId: "price_1SL6LKDcTrtfdJcSsv0N2h0U",
     features: [
       "Secure up to 10 work devices",
       "Centralized management dashboard",
@@ -43,10 +43,10 @@ export const PLANS = {
     badge: "Best for Teams",
     code: "business50",
     name: "Business 50",
-    price: 200,
+    price: 179.99,
     interval: "month",
     devices: 50,
-    stripePriceId: "price_BUS_50",
+    stripePriceId: "price_1SL6P2DcTrtfdJcSZKV2be1J",
     features: [
       "Cover 50 devices across your organization",
       "Role-based device management",
@@ -56,15 +56,15 @@ export const PLANS = {
   business250: {
     code: "business250",
     name: "Business 250+",
-    price: 850,
+    price: 999.99,
     interval: "month",
     devices: 250,
-    stripePriceId: "price_BUS_250",
+    stripePriceId: "price_1SL6SBDcTrtfdJcSxVRuFSPi",
     features: [
       "Enterprise coverage for 250+ devices",
       "Custom SLAs and onboarding support",
       "Dedicated account manager & tailored routing",
     ],
   },
-  
+
 };
