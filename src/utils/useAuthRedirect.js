@@ -14,16 +14,25 @@ const roleToDefault = (role) => {
 };
 
 async function getRole() {
-  const { data: { user } } = await supabase.auth.getUser();
+  console.log("[getRole] Fetching user...");
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  console.log("[getRole] User:", user?.email, "error:", userError);
   if (!user) return null;
   // profiles(id uuid PK, role text)
+  console.log("[getRole] Querying profiles for user:", user.id);
   const { data, error } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
-  if (error) return null;
-  return data?.role || "client";
+  console.log("[getRole] Profile data:", data, "error:", error);
+  if (error) {
+    console.error("[getRole] Error fetching profile:", error);
+    return null;
+  }
+  const role = data?.role || "client";
+  console.log("[getRole] Returning role:", role);
+  return role;
 }
 
 export default function useAuthRedirect() {
