@@ -384,12 +384,35 @@ async function init() {
         return reply.code(500).send("Server misconfigured");
       }
 
+      // Debug logging to understand what we're receiving
+      app.log.info({
+        hasRawBody: !!req.rawBody,
+        rawBodyType: typeof req.rawBody,
+        rawBodyLength: req.rawBody?.length || 0,
+        hasSig: !!sig,
+        sigLength: sig?.length || 0,
+        hasSecret: !!secret,
+        secretLength: secret?.length || 0,
+      }, "[webhook] Debug: raw body info");
+
       let event;
       try {
         // IMPORTANT: use the raw *string* body for verification
-        event = stripe.webhooks.constructEvent(req.rawBody, sig, secret);
+        // req.rawBody should be a Buffer or string from fastifyRawBody
+        const rawBody = req.rawBody;
+
+        if (!rawBody) {
+          app.log.error("[webhook] rawBody is missing - check fastifyRawBody plugin");
+          return reply.code(400).send("Webhook Error: Raw body not captured");
+        }
+
+        event = stripe.webhooks.constructEvent(rawBody, sig, secret);
       } catch (err) {
-        app.log.error({ message: err?.message }, "[webhook] verify failed");
+        app.log.error({
+          message: err?.message,
+          rawBodyType: typeof req.rawBody,
+          rawBodyIsBuffer: Buffer.isBuffer(req.rawBody),
+        }, "[webhook] verify failed");
         return reply.code(400).send(`Webhook Error: ${err.message}`);
       }
 
