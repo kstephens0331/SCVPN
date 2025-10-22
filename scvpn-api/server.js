@@ -284,6 +284,7 @@ async function init() {
   app.post("/api/checkout/claim", async (req, reply) => {
     try {
       if (!supabase) return reply.code(500).send({ error: "supabase service not configured" });
+      if (!requireStripe(reply)) return;
 
       const {
         session_id,
@@ -296,7 +297,20 @@ async function init() {
       if (!session_id) return reply.code(400).send({ error: "missing session_id" });
       if (!email)      return reply.code(400).send({ error: "missing email" });
 
-      // 1) Try to claim an existing row
+      // 1) Get user ID from email
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (!profile) {
+        return reply.code(404).send({ error: "User not found. Please sign up first." });
+      }
+
+      const userId = profile.id;
+
+      // 2) Claim checkout session
       const upd = await supabase
         .from("checkout_sessions")
         .update({ claimed_email: email, claimed_at: new Date().toISOString() })
@@ -305,30 +319,75 @@ async function init() {
         .select("*")
         .maybeSingle();
 
-      if (upd.error) return reply.code(400).send({ error: upd.error.message });
-      if (upd.data) return reply.send({ ok: true, data: upd.data });
+      if (upd.error && upd.error.code !== 'PGRST116') {
+        return reply.code(400).send({ error: upd.error.message });
+      }
 
-      // 2) If not found, create it (webhook might be late) then claim
-      const ins = await supabase
-        .from("checkout_sessions")
+      // If not found, create it
+      if (!upd.data) {
+        const ins = await supabase
+          .from("checkout_sessions")
+          .upsert({
+            id: session_id,
+            email,
+            plan_code: plan_code || null,
+            account_type,
+            quantity: Number(quantity || 1),
+            created_at: new Date().toISOString(),
+            claimed_email: email,
+            claimed_at: new Date().toISOString(),
+          }, { onConflict: "id" })
+          .select("*")
+          .maybeSingle();
+
+        if (ins.error) return reply.code(400).send({ error: ins.error.message });
+      }
+
+      // 3) Get Stripe checkout session to find subscription
+      const stripeSession = await stripe.checkout.sessions.retrieve(session_id);
+
+      if (!stripeSession.subscription) {
+        app.log.warn({ session_id }, "[claim] No subscription found in Stripe session");
+        return reply.send({ ok: true, warning: "No subscription found" });
+      }
+
+      // 4) Get subscription from Stripe
+      const subscription = await stripe.subscriptions.retrieve(stripeSession.subscription);
+
+      // 5) Update Stripe subscription metadata with user_id
+      await stripe.subscriptions.update(subscription.id, {
+        metadata: {
+          ...subscription.metadata,
+          user_id: userId,
+        }
+      });
+
+      // 6) Create/update subscription in our database
+      const { error: subError } = await supabase
+        .from("subscriptions")
         .upsert({
-          id: session_id,
-          email,
-          plan_code: plan_code || null,
-          account_type,
-          quantity: Number(quantity || 1),
+          stripe_subscription_id: subscription.id,
+          stripe_customer_id: subscription.customer,
+          user_id: userId,
+          plan: plan_code || "unknown",
+          status: subscription.status,
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          renews_at: subscription.cancel_at_period_end ? null : new Date(subscription.current_period_end * 1000).toISOString(),
           created_at: new Date().toISOString(),
-          claimed_email: email,
-          claimed_at: new Date().toISOString(),
-        }, { onConflict: "id" })
-        .select("*")
-        .maybeSingle();
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "stripe_subscription_id" });
 
-      if (ins.error) return reply.code(400).send({ error: ins.error.message });
-      if (!ins.data) return reply.code(404).send({ error: "session not found or already claimed" });
+      if (subError) {
+        app.log.error({ error: subError }, "[claim] Failed to save subscription");
+        return reply.code(500).send({ error: "Failed to save subscription" });
+      }
 
-      return reply.send({ ok: true, data: ins.data });
+      app.log.info({ userId, subId: subscription.id, plan: plan_code }, "[claim] Subscription linked to user");
+
+      return reply.send({ ok: true, subscription_id: subscription.id });
     } catch (err) {
+      app.log.error({ err }, "[claim] error");
       reply.code(500).send({ error: "claim failed" });
     }
   });
