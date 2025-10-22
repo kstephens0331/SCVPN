@@ -363,27 +363,42 @@ async function init() {
       });
 
       // 6) Create/update subscription in our database
-      const { error: subError } = await supabase
+      const subscriptionData = {
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id: subscription.customer,
+        user_id: userId,
+        plan: plan_code || "unknown",
+        status: subscription.status,
+        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        renews_at: subscription.cancel_at_period_end ? null : new Date(subscription.current_period_end * 1000).toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      app.log.info({ subscriptionData }, "[claim] Attempting to save subscription");
+
+      const { error: subError, data: subData } = await supabase
         .from("subscriptions")
-        .upsert({
-          stripe_subscription_id: subscription.id,
-          stripe_customer_id: subscription.customer,
-          user_id: userId,
-          plan: plan_code || "unknown",
-          status: subscription.status,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-          renews_at: subscription.cancel_at_period_end ? null : new Date(subscription.current_period_end * 1000).toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "stripe_subscription_id" });
+        .upsert(subscriptionData, { onConflict: "stripe_subscription_id" })
+        .select();
 
       if (subError) {
-        app.log.error({ error: subError }, "[claim] Failed to save subscription");
-        return reply.code(500).send({ error: "Failed to save subscription" });
+        app.log.error({
+          error: subError,
+          code: subError.code,
+          message: subError.message,
+          details: subError.details,
+          hint: subError.hint
+        }, "[claim] Failed to save subscription - detailed error");
+        return reply.code(500).send({
+          error: "Failed to save subscription",
+          details: subError.message,
+          hint: subError.hint
+        });
       }
 
-      app.log.info({ userId, subId: subscription.id, plan: plan_code }, "[claim] Subscription linked to user");
+      app.log.info({ userId, subId: subscription.id, plan: plan_code, subData }, "[claim] Subscription linked to user");
 
       return reply.send({ ok: true, subscription_id: subscription.id });
     } catch (err) {
