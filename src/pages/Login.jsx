@@ -23,40 +23,15 @@ export default function Login(){
     setLoading(true)
     console.log("[Login] Attempting sign in for:", email);
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
     if (error) {
       console.error("[Login] Sign in error:", error);
       setErr(error.message);
+      setLoading(false)
       return
     }
-    console.log("[Login] Sign in successful, refreshing auth state...");
-    await refresh()
-    // Respect ?next=, otherwise choose a role-based default
-    const params = new URLSearchParams(loc.search);
-    const next = params.get("next");
-
-    // fetch role
-    const { data: { user } } = await supabase.auth.getUser();
-    console.log("[Login] Fetched user:", user?.email);
-    let role = "client";
-    if (user) {
-      const { data } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-      console.log("[Login] Profile data:", data);
-      if (data?.role) role = data.role;
-    }
-    const roleToDefault = (r) =>
-      r === "admin" ? "/admin" :
-      r === "business" ? "/app/business/overview" :
-      "/app/personal/overview";
-
-    const to = (next && next.startsWith("/")) ? next : roleToDefault(role);
-    console.log("[Login] Determined role:", role, "navigating to:", to);
-    nav(to, { replace: true });
-    console.log("[Login] Navigation called");
+    console.log("[Login] Sign in successful - useAuthRedirect will handle navigation");
+    // Don't set loading to false or manually navigate
+    // useAuthRedirect's onAuthStateChange will trigger and handle the redirect
   }
 
   return (
@@ -95,14 +70,10 @@ export default function Login(){
             disabled={loading}
             className="rounded-md bg-lime-400 text-black font-semibold px-3 py-2 hover:bg-lime-300 disabled:opacity-60"
           >
-            {loading ? "Signing in" : "Sign in"}
+            {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
       </div>
     </div>
   )
 }
-
-
-
-
