@@ -567,6 +567,103 @@ async function init() {
 
   // ---- WireGuard API Endpoints ----
 
+  // Generate WireGuard key immediately for a device (called from frontend)
+  app.post("/api/wireguard/generate-key", async (req, reply) => {
+    try {
+      if (!wgManager) {
+        return reply.code(500).send({ error: "WireGuard manager not initialized" });
+      }
+      if (!supabase) {
+        return reply.code(500).send({ error: "Supabase not initialized" });
+      }
+
+      const { device_id } = req.body || {};
+      if (!device_id) {
+        return reply.code(400).send({ error: "Missing device_id" });
+      }
+
+      // Get authenticated user
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return reply.code(401).send({ error: "Missing authorization" });
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+      if (authError || !user) {
+        return reply.code(401).send({ error: "Unauthorized" });
+      }
+
+      // Verify device belongs to user
+      const { data: device, error: deviceError } = await supabase
+        .from("devices")
+        .select("id, name, platform, user_id")
+        .eq("id", device_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (deviceError || !device) {
+        return reply.code(404).send({ error: "Device not found or access denied" });
+      }
+
+      // Generate WireGuard config
+      req.log.info({ deviceId: device_id, userId: user.id }, "Generating WireGuard keys");
+
+      const result = await wgManager.generateDeviceConfig(
+        device_id,
+        user.id,
+        null // Let system choose best node
+      );
+
+      // Send email with config and QR code
+      try {
+        const QRCode = (await import('qrcode')).default;
+        const qrCodeDataURL = await QRCode.toDataURL(result.wgConfig, {
+          errorCorrectionLevel: 'M',
+          type: 'image/png',
+          width: 400,
+          margin: 2
+        });
+
+        // Get user profile for email
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.email && emailService) {
+          const emailResult = await emailService.sendVPNSetupEmail({
+            userEmail: profile.email,
+            userName: profile.full_name || profile.email.split('@')[0],
+            deviceName: device.name || 'Your Device',
+            wgConfig: result.wgConfig,
+            qrCodeDataURL
+          });
+
+          if (emailResult.success) {
+            req.log.info({ userId: user.id, email: profile.email, messageId: emailResult.messageId }, "VPN setup email sent");
+          } else {
+            req.log.warn({ userId: user.id, error: emailResult.error }, "Failed to send email");
+          }
+        }
+      } catch (emailError) {
+        req.log.warn({ error: emailError.message }, "Email send failed, but keys generated successfully");
+      }
+
+      return reply.send({
+        success: true,
+        message: "WireGuard keys generated successfully. Check your email for setup instructions.",
+        config_id: result.config.id
+      });
+
+    } catch (error) {
+      req.log.error({ error: error.message }, "Failed to generate WireGuard key");
+      return reply.code(500).send({ error: error.message || "Failed to generate keys" });
+    }
+  });
+
   // Process key requests (background job or manual trigger)
   app.post("/api/wireguard/process-requests", async (req, reply) => {
     try {

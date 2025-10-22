@@ -9,9 +9,32 @@ export default function PersonalDevices(){
 
   async function requestKey(id){
     try{
-      const { error } = await supabase.rpc('request_wg_key', { p_device_id: id });
-      if (error) { alert('Failed: ' + error.message); return; }
-      alert('Key request submitted. Check your email shortly.');
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Please log in to request a key');
+        return;
+      }
+
+      // Call new immediate key generation endpoint
+      const response = await fetch(`${import.meta.env.VITE_API_BASE}/api/wireguard/generate-key`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ device_id: id })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert('Failed: ' + (result.error || 'Unknown error'));
+        return;
+      }
+
+      alert('✅ WireGuard keys generated! Check your email for setup instructions.');
+      await load(); // Reload devices to show updated status
     }catch(e){
       alert('Error: ' + (e?.message ?? e));
     }
