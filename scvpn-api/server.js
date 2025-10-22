@@ -723,6 +723,146 @@ async function init() {
     }
   });
 
+  // Admin endpoint: Device actions (activate, suspend, revoke_keys)
+  app.post("/api/admin-device", async (req, reply) => {
+    try {
+      if (!supabase) return reply.code(500).send({ error: "Database not available" });
+
+      // Check admin authentication
+      const adminEmail = req.headers['x-admin-email'];
+      if (!adminEmail) {
+        return reply.code(401).send({ error: "Admin authentication required" });
+      }
+
+      const { data: isAdmin } = await supabase
+        .from("admin_emails")
+        .select("is_admin")
+        .eq("email", adminEmail)
+        .eq("is_admin", true)
+        .single();
+
+      if (!isAdmin) {
+        return reply.code(403).send({ error: "Admin access required" });
+      }
+
+      const { action, deviceId } = req.body || {};
+
+      if (!action || !deviceId) {
+        return reply.code(400).send({ error: "action and deviceId required" });
+      }
+
+      // Get device details
+      const { data: device, error: deviceError } = await supabase
+        .from("devices")
+        .select("id, user_id, org_id, is_active")
+        .eq("id", deviceId)
+        .single();
+
+      if (deviceError || !device) {
+        return reply.code(404).send({ error: "Device not found" });
+      }
+
+      if (action === "activate") {
+        // Generate new WireGuard keys for this device
+        if (!wgManager) {
+          return reply.code(500).send({ error: "WireGuard manager not initialized" });
+        }
+
+        // First check if device already has active config
+        const { data: existingConfig } = await supabase
+          .from("device_configs")
+          .select("id, is_active")
+          .eq("device_id", deviceId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingConfig?.is_active) {
+          // Deactivate old config first
+          await wgManager.removeDeviceConfig(deviceId);
+        }
+
+        // Generate new config
+        const result = await wgManager.generateDeviceConfig(deviceId, device.user_id);
+
+        // Activate the device
+        await supabase
+          .from("devices")
+          .update({ is_active: true, updated_at: new Date().toISOString() })
+          .eq("id", deviceId);
+
+        req.log.info({ deviceId, adminEmail }, "Device activated with new keys");
+
+        return reply.send({
+          success: true,
+          message: "Device activated with new keys",
+          config_id: result.config.id,
+          node_id: result.config.node_id,
+          client_ip: result.config.client_ip
+        });
+
+      } else if (action === "suspend") {
+        // Suspend device access (deactivate but keep configs)
+        await supabase
+          .from("devices")
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq("id", deviceId);
+
+        // Deactivate all device configs
+        await supabase
+          .from("device_configs")
+          .update({ is_active: false, deactivated_at: new Date().toISOString() })
+          .eq("device_id", deviceId);
+
+        req.log.info({ deviceId, adminEmail }, "Device suspended");
+
+        return reply.send({
+          success: true,
+          message: "Device suspended"
+        });
+
+      } else if (action === "revoke_keys") {
+        // Revoke all keys and remove from WireGuard nodes
+        if (!wgManager) {
+          return reply.code(500).send({ error: "WireGuard manager not initialized" });
+        }
+
+        // Remove device config from WireGuard
+        try {
+          await wgManager.removeDeviceConfig(deviceId);
+        } catch (err) {
+          req.log.warn({ err, deviceId }, "Failed to remove device from WireGuard node (may already be removed)");
+        }
+
+        // Delete all device configs
+        await supabase
+          .from("device_configs")
+          .delete()
+          .eq("device_id", deviceId);
+
+        // Deactivate device
+        await supabase
+          .from("devices")
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq("id", deviceId);
+
+        req.log.info({ deviceId, adminEmail }, "Device keys revoked");
+
+        return reply.send({
+          success: true,
+          message: "All keys revoked and device deactivated"
+        });
+
+      } else {
+        return reply.code(400).send({ error: "Invalid action. Use: activate, suspend, or revoke_keys" });
+      }
+
+    } catch (error) {
+      req.log.error({ error }, "Error in admin device action");
+      return reply.code(500).send({ error: error.message });
+    }
+  });
+
   // Health check endpoint that includes WireGuard status
   app.get("/api/wireguard/health", async (req, reply) => {
     try {
