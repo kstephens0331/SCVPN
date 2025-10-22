@@ -1,7 +1,7 @@
 ﻿// src/pages/PostCheckout.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "../supabaseClient";
+import { supabase } from "../lib/supabase";
 import { PLANS } from "../lib/pricing.js";
 
 export default function PostCheckout() {
