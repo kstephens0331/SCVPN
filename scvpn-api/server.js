@@ -30,9 +30,8 @@ const {
   SCVPN_SUPABASE_SERVICE_KEY,
   STRIPE_WEBHOOK_SECRET,
 
-  // Email (Google SMTP)
-  SMTP_USER,
-  SMTP_PASS
+  // Email (SendGrid)
+  SENDGRID_API_KEY
 } = process.env;
 
 // ---- Helpers / constants used later ----
@@ -63,11 +62,8 @@ async function init() {
   // Initialize WireGuard Manager
   const wgManager = supabase ? new WireGuardManager(supabase, app.log) : null;
 
-  // Initialize Email Service with Google SMTP
-  const emailService = new EmailService(
-    { user: SMTP_USER, pass: SMTP_PASS },
-    app.log
-  );
+  // Initialize Email Service with SendGrid
+  const emailService = new EmailService(SENDGRID_API_KEY, app.log);
 
   // ---- CORS allow-list ----
   const ALLOW = new Set(

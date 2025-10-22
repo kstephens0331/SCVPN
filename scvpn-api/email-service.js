@@ -1,47 +1,27 @@
 // Email service for VPN setup notifications
-// Uses nodemailer with Google SMTP
+// Uses SendGrid for reliable email delivery
 
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 
 export class EmailService {
-  constructor(smtpConfig, logger) {
+  constructor(apiKey, logger) {
     this.logger = logger;
     this.fromEmail = 'SACVPN <info@stephenscode.dev>';
+    this.sendGridConfigured = false;
 
-    // Create nodemailer transporter with Google SMTP
-    if (smtpConfig?.user && smtpConfig?.pass) {
-      this.transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465, // Use SSL port instead of STARTTLS (more reliable on Railway)
-        secure: true, // Use SSL
-        auth: {
-          user: smtpConfig.user,
-          pass: smtpConfig.pass, // Use App Password, not regular password
-        },
-        // Add timeouts to prevent hanging
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-        // Add retry logic
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
-      });
-      this.logger.info({
-        user: smtpConfig.user,
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true
-      }, 'Email service initialized with Google SMTP (SSL)');
+    // Initialize SendGrid
+    if (apiKey) {
+      sgMail.setApiKey(apiKey);
+      this.sendGridConfigured = true;
+      this.logger.info({ from: this.fromEmail }, 'Email service initialized with SendGrid');
     } else {
-      this.transporter = null;
-      this.logger.warn('Email service not configured - SMTP credentials missing');
+      this.logger.warn('Email service not configured - SendGrid API key missing');
     }
   }
 
   // Send VPN setup email with config file and QR code
   async sendVPNSetupEmail({ userEmail, userName, deviceName, wgConfig, qrCodeDataURL }) {
-    if (!this.transporter) {
+    if (!this.sendGridConfigured) {
       this.logger.warn('Email service not configured - skipping email');
       return { success: false, error: 'Email service not configured' };
     }
@@ -53,26 +33,36 @@ export class EmailService {
         ? this.getMobileSetupEmail(userName, deviceName, qrCodeDataURL, wgConfig)
         : this.getDesktopSetupEmail(userName, deviceName, wgConfig);
 
-      const mailOptions = {
-        from: this.fromEmail,
+      const msg = {
         to: userEmail,
+        from: this.fromEmail,
         subject: `Your ${deviceName} VPN is Ready! 🔒`,
         html: emailHtml,
         attachments: [
           {
             filename: `${this.sanitizeFilename(deviceName)}_sacvpn.conf`,
-            content: wgConfig,
+            content: Buffer.from(wgConfig).toString('base64'),
+            type: 'text/plain',
+            disposition: 'attachment',
           }
         ]
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
+      const response = await sgMail.send(msg);
 
-      this.logger.info({ messageId: info.messageId, to: userEmail }, 'VPN setup email sent');
-      return { success: true, messageId: info.messageId };
+      this.logger.info({
+        messageId: response[0].headers['x-message-id'],
+        to: userEmail
+      }, 'VPN setup email sent');
+
+      return { success: true, messageId: response[0].headers['x-message-id'] };
 
     } catch (error) {
-      this.logger.error({ error: error.message }, 'Email sending failed');
+      this.logger.error({
+        error: error.message,
+        code: error.code,
+        response: error.response?.body
+      }, 'Email sending failed');
       return { success: false, error: error.message };
     }
   }
