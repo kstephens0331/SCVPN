@@ -8,7 +8,16 @@ export default function AdminLayout(){
     (isActive ? "border-lime-400 text-lime-400"
               : "border-transparent text-gray-400 hover:text-lime-300 hover:border-lime-300")
 
-  async function signOut(){ await supabase.auth.signOut(); nav("/", { replace:true }) }
+  async function signOut(){
+    console.log("[AdminLayout] Signing out...");
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("[AdminLayout] Sign out error:", error);
+    } else {
+      console.log("[AdminLayout] Sign out successful, navigating to home");
+      nav("/", { replace:true });
+    }
+  }
 
   return (
     <div className="min-h-screen w-screen bg-black text-lime-400 flex flex-col overflow-x-hidden">
