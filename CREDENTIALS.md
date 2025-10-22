@@ -20,7 +20,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 ```
 STRIPE_SECRET_KEY=<see Railway environment variables>
 STRIPE_PUBLISHABLE_KEY=pk_live_51RK1KrDcTrtfdJcSaB7uKNkMTbfnC7i2DzKglQBpLEUnIOhBU1q6i6Dxj2ZNu6Ju4UwxxaGa4iaOhWj5t4Mq7HRt00dbwgDNue
-STRIPE_WEBHOOK_SECRET=whsec_6CR09lvw6BwjAobQM4RgLKwTcqJgBChy
+STRIPE_WEBHOOK_SECRET=<see Railway environment variables>
 ```
 
 ### Stripe Price IDs
