@@ -378,10 +378,33 @@ async function init() {
 
       app.log.info({ subscriptionData }, "[claim] Attempting to save subscription");
 
-      const { error: subError, data: subData } = await supabase
+      // First check if subscription already exists
+      const { data: existingSub } = await supabase
         .from("subscriptions")
-        .upsert(subscriptionData, { onConflict: "stripe_subscription_id" })
-        .select();
+        .select("id")
+        .eq("stripe_subscription_id", subscription.id)
+        .maybeSingle();
+
+      let subError, subData;
+
+      if (existingSub) {
+        // Update existing subscription
+        const result = await supabase
+          .from("subscriptions")
+          .update(subscriptionData)
+          .eq("stripe_subscription_id", subscription.id)
+          .select();
+        subError = result.error;
+        subData = result.data;
+      } else {
+        // Insert new subscription
+        const result = await supabase
+          .from("subscriptions")
+          .insert(subscriptionData)
+          .select();
+        subError = result.error;
+        subData = result.data;
+      }
 
       if (subError) {
         app.log.error({
