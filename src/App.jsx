@@ -23,7 +23,7 @@ import BusinessBilling from "./pages/business/Billing";
 import { Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 import Home from "./pages/Home.jsx";
-import Pricing from "./pages/Pricing.jsx";
+import PricingFinal from "./pages/PricingFinal.jsx";
 import FAQ from "./pages/FAQ.jsx";
 import Contact from "./pages/Contact.jsx";
 import Login from "./pages/Login.jsx";
@@ -42,13 +42,13 @@ export default function App() {
       <Route path="/app" element={<AppLanding />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/pricing" element={<PricingFinal />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
-        
+
         <Route path="/about" element={<About />} />
       </Route>
     <Route path="/app/personal/*" element={<RequireAuth><PersonalLayout/></RequireAuth>}>

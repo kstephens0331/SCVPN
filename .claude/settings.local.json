@@ -4,7 +4,15 @@
       "Bash(npm run build:*)",
       "Bash(npx eslint:*)",
       "Bash(npx tsc:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "Bash(dir:*)",
+      "Bash(curl:*)",
+      "Bash(export SCVPN_SUPABASE_URL=https://ltwuqjmncldopkutiyak.supabase.co)",
+      "Bash(export:*)",
+      "Bash(node simple-setup.js:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

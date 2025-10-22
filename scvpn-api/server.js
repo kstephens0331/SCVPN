@@ -175,6 +175,8 @@ async function init() {
       const body = req.body || {};
       const {
         plan_code,
+        billing_period = "monthly", // NEW: billing period support
+        stripe_price_id, // NEW: direct price ID from frontend
         account_type = "personal",
         quantity = 1,
         customer_email,
@@ -182,14 +184,19 @@ async function init() {
 
       // Log the inputs (safe)
       req.log.info(
-        { plan_code, account_type, quantity, has_email: !!customer_email },
+        { plan_code, billing_period, account_type, quantity, has_email: !!customer_email },
         "[checkout] incoming"
       );
 
-      const price = PRICE_MAP[plan_code];
+      // Use direct price ID if provided (new pricing system)
+      // Otherwise fall back to legacy PRICE_MAP
+      let price = stripe_price_id;
       if (!price) {
-        req.log.warn({ plan_code }, "[checkout] unknown plan_code");
-        return reply.code(400).send({ error: "Unknown plan_code" });
+        price = PRICE_MAP[plan_code];
+        if (!price) {
+          req.log.warn({ plan_code }, "[checkout] unknown plan_code");
+          return reply.code(400).send({ error: "Unknown plan_code" });
+        }
       }
 
       // Label used only for metadata / UI
@@ -212,6 +219,7 @@ async function init() {
         metadata: {
           plan_code,
           plan_label,
+          billing_period, // NEW: track billing period in metadata
           account_type,
           quantity: String(quantity),
         },
@@ -343,6 +351,7 @@ async function init() {
                 id: s.id,
                 email: s.customer_details?.email || null,
                 plan_code: s.metadata?.plan_code || null,
+                billing_period: s.metadata?.billing_period || "monthly", // NEW: save billing period
                 account_type: s.metadata?.account_type || "personal",
                 quantity: qty,
                 created_at: new Date().toISOString(),
