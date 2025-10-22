@@ -50,7 +50,27 @@ export default function PersonalDevices(){
         alert('Failed: ' + error.message);
         return;
       }
-      alert('Key request submitted. Keys will be processed shortly. Check your email.');
+
+      // Immediately trigger batch processing
+      console.log('Triggering immediate key processing...');
+      try {
+        const processResponse = await fetch(`${import.meta.env.VITE_API_BASE}/api/wireguard/process-requests`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (processResponse.ok) {
+          console.log('Key processing triggered successfully');
+          alert('✅ WireGuard keys generated! Check your email for setup instructions.');
+        } else {
+          console.warn('Key processing failed, but request created');
+          alert('Key request submitted. Processing... Check your email in a few moments.');
+        }
+      } catch (processError) {
+        console.error('Failed to trigger processing:', processError);
+        alert('Key request submitted. Processing... Check your email in a few moments.');
+      }
+
       await load();
     }catch(e){
       alert('Error: ' + (e?.message ?? e));
