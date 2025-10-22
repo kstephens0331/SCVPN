@@ -7,7 +7,10 @@ export default function Telemetry(){
   useEffect(()=>{
     supabase.from("device_latest_telemetry")
       .select("device_id, node_id, is_connected, client_ip, last_handshake, bytes_received, bytes_sent, recorded_at")
-      .then(({data})=> setRows(data||[]))
+      .then(({data, error})=> {
+        console.log("[Telemetry] Device telemetry data:", data, "error:", error);
+        setRows(data||[]);
+      })
   },[])
 
   return (

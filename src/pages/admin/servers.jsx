@@ -12,13 +12,17 @@ export default function Servers(){
     // Hosts
     supabase.from("vps_hosts")
       .select("id,name,ip,ssh_user,ssh_port")
-      .then(({data})=> setHosts(data||[]))
+      .then(({data, error})=> {
+        console.log("[Servers] VPS hosts data:", data, "error:", error);
+        setHosts(data||[]);
+      })
 
     // Latest metrics (last 5 minutes)
     supabase.from("vps_metrics")
       .select("host_id,ts,cpu,mem_used,mem_total,disk_used,disk_total,load1,load5,load15")
       .gte("ts", new Date(Date.now()-5*60*1000).toISOString())
-      .then(({data})=>{
+      .then(({data, error})=>{
+        console.log("[Servers] VPS metrics data:", data, "error:", error);
         const byHost = {}
         for(const r of (data||[])){
           if(!byHost[r.host_id] || new Date(r.ts) > new Date(byHost[r.host_id].ts)){

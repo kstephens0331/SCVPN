@@ -4,8 +4,14 @@ export default function Accounts(){
   const [users, setUsers] = useState([])
   const [orgs, setOrgs] = useState([])
   useEffect(()=>{
-    supabase.from("profiles").select("id,email,full_name,account_type").then(({data})=>setUsers(data||[]))
-    supabase.from("organizations").select("id,name,plan,is_active").then(({data})=>setOrgs(data||[]))
+    supabase.from("profiles").select("id,email,full_name,account_type").then(({data, error})=>{
+      console.log("[Accounts] Profiles data:", data, "error:", error);
+      setUsers(data||[]);
+    });
+    supabase.from("organizations").select("id,name,plan,is_active").then(({data, error})=>{
+      console.log("[Accounts] Organizations data:", data, "error:", error);
+      setOrgs(data||[]);
+    });
   },[])
   return (
     <div className="grid gap-8">
