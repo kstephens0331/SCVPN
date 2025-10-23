@@ -352,7 +352,7 @@ DNS = ${deviceConfig.dns_servers}
 [Peer]
 PublicKey = ${node.public_key}
 Endpoint = ${node.public_ip}:${node.port || 51820}
-AllowedIPs = 0.0.0.0/0, ::/0
+AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25`;
   }
 
