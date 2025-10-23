@@ -12,8 +12,20 @@ export function useSessionRole() {
 
     const init = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
+        console.log("[useSessionRole] Starting init...");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error("[useSessionRole] Session error:", sessionError);
+        }
+
+        console.log("[useSessionRole] Session:", session?.user?.email || "none");
+
+        if (!mounted) {
+          console.log("[useSessionRole] Component unmounted, aborting");
+          return;
+        }
+
         setSession(session);
 
         // resolve role if we're logged in
@@ -33,6 +45,7 @@ export function useSessionRole() {
           }
 
           let r = p?.role ?? null;
+          console.log("[useSessionRole] Profile role:", r);
 
           // fallback: treat as admin if listed in admin_emails (or your "authorization" table)
           if (!r && email) {
@@ -47,12 +60,19 @@ export function useSessionRole() {
             }
 
             if (adminRow?.is_admin || adminRow?.role === "admin") r = "admin";
+            console.log("[useSessionRole] Admin check result:", r);
           }
 
           // Default to 'client' if no role found
-          setRole(r || 'client');
+          const finalRole = r || 'client';
+          console.log("[useSessionRole] Final role:", finalRole);
+          setRole(finalRole);
+        } else {
+          console.log("[useSessionRole] No session found");
+          setRole(null);
         }
 
+        console.log("[useSessionRole] Init complete, setting loading=false");
         setLoading(false);
       } catch (error) {
         console.error("[useSessionRole] Init error:", error);

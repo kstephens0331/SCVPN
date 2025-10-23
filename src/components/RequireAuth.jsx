@@ -8,13 +8,13 @@ export default function RequireAuth({ children }) {
   const loc = useLocation();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  // Timeout after 5 seconds of loading to prevent infinite loading
+  // Timeout after 1 second of loading to prevent infinite loading
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
         console.error("[RequireAuth] Loading timeout - forcing through");
         setLoadingTimeout(true);
-      }, 5000);
+      }, 1000); // Reduced from 5000ms to 1000ms
       return () => clearTimeout(timer);
     }
   }, [loading]);
