@@ -85,23 +85,59 @@ export default function PersonalDevices(){
   const [busy, setBusy] = useState(false);
 
   async function load(){
-    setErr("");
-    // personal devices: org_id IS NULL
-    const { data, error } = await supabase
-      .from("devices")
-      .select("id,name,platform,is_active")
-      .is("org_id", null)
-      .eq("user_id", (await supabase.auth.getUser()).data.user?.id || "")
-      .order("created_at", { ascending:false });
+    try {
+      setErr("");
+      console.log("[Devices] Loading devices...");
 
-    if (error) { setErr(error.message); return; }
-    setRows(data || []);
+      // Get user first
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    // connectivity snapshot (optional)
-    const { data: t } = await supabase
-      .from("device_latest_telemetry")
-      .select("device_id,is_connected");
-    setConn(Object.fromEntries((t||[]).map(x=>[x.device_id, x.is_connected])));
+      if (userError) {
+        console.error("[Devices] User error:", userError);
+        setErr("Failed to get user: " + userError.message);
+        return;
+      }
+
+      if (!user) {
+        console.error("[Devices] No user found");
+        setErr("Not logged in");
+        return;
+      }
+
+      console.log("[Devices] User:", user.email, "ID:", user.id);
+
+      // personal devices: org_id IS NULL
+      const { data, error } = await supabase
+        .from("devices")
+        .select("id,name,platform,is_active")
+        .is("org_id", null)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending:false });
+
+      if (error) {
+        console.error("[Devices] Query error:", error);
+        setErr(error.message);
+        return;
+      }
+
+      console.log("[Devices] Loaded", data?.length || 0, "devices");
+      setRows(data || []);
+
+      // connectivity snapshot (optional)
+      const { data: t, error: telemetryError } = await supabase
+        .from("device_latest_telemetry")
+        .select("device_id,is_connected");
+
+      if (telemetryError) {
+        console.warn("[Devices] Telemetry error:", telemetryError);
+        // Don't show error for telemetry, it's optional
+      }
+
+      setConn(Object.fromEntries((t||[]).map(x=>[x.device_id, x.is_connected])));
+    } catch (e) {
+      console.error("[Devices] Load error:", e);
+      setErr("Failed to load devices: " + (e.message || e));
+    }
   }
 
   useEffect(()=>{ load(); },[]);
