@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import DeviceConfig from "../../components/DeviceConfig";
+import { API_BASE } from "../../lib/apiBase";
 
 const PLATFORMS = ["ios","android","macos","windows","linux","router","other"];
 
@@ -18,7 +19,7 @@ export default function PersonalDevices(){
 
       // Try new immediate key generation endpoint
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE}/api/wireguard/generate-key`, {
+        const response = await fetch(`${API_BASE}/api/wireguard/generate-key`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -54,7 +55,7 @@ export default function PersonalDevices(){
       // Immediately trigger batch processing
       console.log('Triggering immediate key processing...');
       try {
-        const processResponse = await fetch(`${import.meta.env.VITE_API_BASE}/api/wireguard/process-requests`, {
+        const processResponse = await fetch(`${API_BASE}/api/wireguard/process-requests`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
