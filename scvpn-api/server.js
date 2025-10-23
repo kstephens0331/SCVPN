@@ -73,6 +73,11 @@ async function init() {
       .filter(Boolean)
   );
 
+  app.log.info({
+    allowedOrigins: Array.from(ALLOW),
+    rawEnvVar: ALLOWED_ORIGINS
+  }, "CORS configuration initialized");
+
   function corsHeaders(origin) {
     const allowOrigin = origin && ALLOW.has(origin) ? origin : null;
     const h = {
@@ -117,7 +122,11 @@ async function init() {
   await app.register(cors, {
     origin: (origin, cb) => {
       if (!origin) return cb(null, true); // same-origin/curl
-      return cb(null, ALLOW.has(origin));
+      const isAllowed = ALLOW.has(origin);
+      if (!isAllowed) {
+        app.log.warn({ origin, allowedOrigins: Array.from(ALLOW) }, "CORS: Origin not allowed");
+      }
+      return cb(null, isAllowed);
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "x-admin-email"],
