@@ -2,6 +2,7 @@
 import { spawn } from "child_process";
 import { promisify } from "util";
 import { createHash, randomBytes } from "crypto";
+import nacl from "tweetnacl";
 
 export class WireGuardManager {
   constructor(supabase, logger) {
@@ -33,34 +34,51 @@ export class WireGuardManager {
     this.logger.info({ nodeCount: this.nodes.size }, "WireGuard manager initialized");
   }
 
-  // Generate a new WireGuard private key
-  generatePrivateKey() {
-    const key = randomBytes(32);
-    return Buffer.from(key).toString('base64');
+  // Generate a new WireGuard key pair using TweetNaCl (Curve25519)
+  // WireGuard uses Curve25519 for encryption, same as NaCl
+  generateKeyPair() {
+    // Generate a random 32-byte private key
+    const privateKeyBytes = nacl.randomBytes(32);
+
+    // Clamp the private key (WireGuard requirement)
+    // https://cr.yp.to/ecdh.html
+    privateKeyBytes[0] &= 248;
+    privateKeyBytes[31] &= 127;
+    privateKeyBytes[31] |= 64;
+
+    // Derive public key using Curve25519
+    const publicKeyBytes = nacl.scalarMult.base(privateKeyBytes);
+
+    return {
+      privateKey: Buffer.from(privateKeyBytes).toString('base64'),
+      publicKey: Buffer.from(publicKeyBytes).toString('base64')
+    };
   }
 
-  // Generate public key from private key (requires wg command)
+  // Legacy method - now just calls generateKeyPair
+  generatePrivateKey() {
+    return this.generateKeyPair().privateKey;
+  }
+
+  // Generate public key from existing private key
   async generatePublicKey(privateKey) {
-    return new Promise((resolve, reject) => {
-      const proc = spawn('wg', ['pubkey'], { stdio: ['pipe', 'pipe', 'pipe'] });
-      
-      let stdout = '';
-      let stderr = '';
-      
-      proc.stdout.on('data', (data) => stdout += data.toString());
-      proc.stderr.on('data', (data) => stderr += data.toString());
-      
-      proc.on('close', (code) => {
-        if (code === 0) {
-          resolve(stdout.trim());
-        } else {
-          reject(new Error(`wg pubkey failed: ${stderr}`));
-        }
-      });
-      
-      proc.stdin.write(privateKey + '\n');
-      proc.stdin.end();
-    });
+    try {
+      // Decode base64 private key
+      const privateKeyBytes = Buffer.from(privateKey, 'base64');
+
+      // Clamp the private key (WireGuard requirement)
+      privateKeyBytes[0] &= 248;
+      privateKeyBytes[31] &= 127;
+      privateKeyBytes[31] |= 64;
+
+      // Derive public key using Curve25519
+      const publicKeyBytes = nacl.scalarMult.base(privateKeyBytes);
+
+      return Buffer.from(publicKeyBytes).toString('base64');
+    } catch (error) {
+      this.logger.error({ error: error.message }, "Failed to generate public key from private key");
+      throw new Error(`Key generation failed: ${error.message}`);
+    }
   }
 
   // Assign user to best available node
