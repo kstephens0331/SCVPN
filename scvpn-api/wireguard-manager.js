@@ -82,7 +82,7 @@ export class WireGuardManager {
   }
 
   // Assign user to best available node
-  // Strategy: Dallas handles quick connects until 80% full, then VA Primary takes over
+  // Strategy: VA Primary handles all client connections (Dallas is backend relay only)
   selectBestNode(userRegion = 'us-east', userLocation = null) {
     const availableNodes = Array.from(this.nodes.values())
       .filter(node => node.is_active && node.current_clients < node.max_clients);
@@ -91,28 +91,29 @@ export class WireGuardManager {
       throw new Error('No available VPN nodes');
     }
 
-    // Find Dallas and VA nodes
-    const dallasCentral = availableNodes.find(n => n.name === 'SACVPN-Dallas-Central' || n.priority === 2);
+    // Find VA and Dallas nodes
     const vaPrimary = availableNodes.find(n => n.name === 'SACVPN-VA-Primary' || n.priority === 1);
+    const dallasCentral = availableNodes.find(n => n.name === 'SACVPN-Dallas-Central' || n.priority === 2);
 
-    // STRATEGY: Dallas handles quick connects and small traffic until 80% capacity
-    if (dallasCentral && dallasCentral.current_clients < (dallasCentral.max_clients * 0.80)) {
-      this.logger.info({
-        node: dallasCentral.name,
-        load: `${dallasCentral.current_clients}/${dallasCentral.max_clients}`,
-        capacity: `${((dallasCentral.current_clients / dallasCentral.max_clients) * 100).toFixed(1)}%`
-      }, "Selected Dallas Central for quick connect (under 80% capacity)");
-      return dallasCentral;
-    }
-
-    // Dallas is at/over 80% capacity - use VA Primary
-    if (vaPrimary) {
+    // STRATEGY: VA Primary handles ALL client connections (Dallas blocked by some ISPs)
+    // Dallas acts as backend relay peered with VA
+    if (vaPrimary && vaPrimary.current_clients < vaPrimary.max_clients) {
       this.logger.info({
         node: vaPrimary.name,
         load: `${vaPrimary.current_clients}/${vaPrimary.max_clients}`,
-        reason: dallasCentral ? 'Dallas at 80%+ capacity' : 'Dallas unavailable'
-      }, "Selected VA Primary (overflow from Dallas)");
+        capacity: `${((vaPrimary.current_clients / vaPrimary.max_clients) * 100).toFixed(1)}%`
+      }, "Selected VA Primary for client connection (primary node)");
       return vaPrimary;
+    }
+
+    // VA is at capacity - use Dallas as fallback (note: may be blocked by some ISPs)
+    if (dallasCentral) {
+      this.logger.warn({
+        node: dallasCentral.name,
+        load: `${dallasCentral.current_clients}/${dallasCentral.max_clients}`,
+        reason: vaPrimary ? 'VA at capacity' : 'VA unavailable'
+      }, "Selected Dallas Central (fallback - may be blocked by some ISPs)");
+      return dallasCentral;
     }
 
     // Fallback: Sort by priority, then by load
@@ -243,11 +244,14 @@ export class WireGuardManager {
 
   // Add peer via SSH commands
   async addPeerViaSSH(node, peer) {
+    // Use sudo for non-root users (like ubuntu)
+    const useSudo = node.ssh_user && node.ssh_user !== 'root';
     const command = [
+      useSudo ? 'sudo' : '',
       'wg', 'set', node.interface_name,
       'peer', peer.publicKey,
       'allowed-ips', peer.allowedIPs
-    ].join(' ');
+    ].filter(Boolean).join(' ');
 
     return this.executeSSHCommand(node, command);
   }

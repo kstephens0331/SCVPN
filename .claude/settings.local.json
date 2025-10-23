@@ -20,7 +20,12 @@
       "Bash(npm install:*)",
       "Bash(git reset:*)",
       "Bash(npm uninstall:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(npm search:*)",
+      "Bash(node -e:*)",
+      "Bash(nslookup:*)",
+      "Bash(ssh:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
