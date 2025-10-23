@@ -15,7 +15,7 @@ export function useSessionRole() {
       if (!mounted) return;
       setSession(session);
 
-      // resolve role if we’re logged in
+      // resolve role if we're logged in
       if (session?.user) {
         const uid = session.user.id;
         const email = session.user.email;
@@ -25,7 +25,7 @@ export function useSessionRole() {
           .from("profiles")
           .select("role")
           .eq("id", uid)
-          .single();
+          .maybeSingle(); // Use maybeSingle() instead of single() to avoid error if profile doesn't exist
 
         let r = p?.role ?? null;
 
@@ -56,7 +56,7 @@ export function useSessionRole() {
           .from("profiles")
           .select("role")
           .eq("id", s.user.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle() instead of single() to avoid error if profile doesn't exist
         let r = p?.role ?? null;
 
         if (!r && s.user.email) {

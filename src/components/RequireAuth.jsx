@@ -6,7 +6,14 @@ export default function RequireAuth({ children }) {
   const { session, role, loading } = useSessionRole();
   const loc = useLocation();
 
-  if (loading) return null; // or a spinner
+  // Show loading spinner instead of null to prevent white screen
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-lime-400 text-xl">Loading...</div>
+      </div>
+    );
+  }
 
   if (!session?.user) {
     return <Navigate to="/login" state={{ from: loc }} replace />;

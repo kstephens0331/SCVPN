@@ -41,12 +41,13 @@ export default function useAuthRedirect() {
 
   useEffect(() => {
     let mounted = true;
+    let hasRedirected = false; // Prevent multiple redirects
 
     (async () => {
       console.log("[useAuthRedirect] Checking session on path:", loc.pathname);
       const { data: { session } } = await supabase.auth.getSession();
       console.log("[useAuthRedirect] Session exists:", !!session, "user:", session?.user?.email);
-      if (!mounted || !session) return;
+      if (!mounted || !session || hasRedirected) return;
 
       // Only hop away from public pages
       if (PUBLIC_PATHS.has(loc.pathname)) {
@@ -59,6 +60,7 @@ export default function useAuthRedirect() {
         console.log("[useAuthRedirect] Target:", target, "Current:", loc.pathname);
         if (target && target !== loc.pathname) {
           console.log("[useAuthRedirect] Navigating to:", target);
+          hasRedirected = true;
           nav(target, { replace: true });
         }
       } else {
@@ -69,7 +71,7 @@ export default function useAuthRedirect() {
     const { data: sub } = supabase.auth.onAuthStateChange(async (evt, sess) => {
       console.log("[useAuthRedirect] Auth state changed:", evt, "has session:", !!sess);
       console.log("[useAuthRedirect] Current pathname:", loc.pathname, "is public?", PUBLIC_PATHS.has(loc.pathname));
-      if (!sess) return;
+      if (!sess || hasRedirected) return;
       if (PUBLIC_PATHS.has(loc.pathname)) {
         console.log("[useAuthRedirect] On public path, fetching role...");
         const next = new URLSearchParams(loc.search).get("next");
@@ -78,6 +80,7 @@ export default function useAuthRedirect() {
         const fallback = roleToDefault(role);
         const target = (next && next.startsWith("/")) ? next : fallback;
         console.log("[useAuthRedirect] Auth change - navigating to:", target);
+        hasRedirected = true;
         nav(target, { replace: true });
       } else {
         console.log("[useAuthRedirect] Not on public path, skipping redirect");
