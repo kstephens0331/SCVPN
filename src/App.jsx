@@ -31,6 +31,8 @@ import Dashboard from "./pages/Dashboard.jsx";
 import About from "./pages/About.jsx";
 import PostCheckout from "./pages/PostCheckout";
 import AuthCallback from "./pages/AuthCallback";
+import TermsOfService from "./pages/TermsOfService.jsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 
 import useAuthRedirect from './utils/useAuthRedirect';
 
@@ -48,8 +50,9 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
-
         <Route path="/about" element={<About />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
       </Route>
     <Route path="/app/personal/*" element={<RequireAuth><PersonalLayout/></RequireAuth>}>
   <Route path="overview" element={<PersonalOverview/>} />
