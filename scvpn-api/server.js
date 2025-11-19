@@ -728,7 +728,8 @@ async function init() {
             userName: profile.full_name || profile.email.split('@')[0],
             deviceName: device.name || 'Your Device',
             wgConfig: result.wgConfig,
-            qrCodeDataURL
+            qrCodeDataURL,
+            platform: device.platform
           });
 
           if (emailResult.success) {
@@ -827,7 +828,8 @@ async function init() {
                 userName: profile.full_name,
                 deviceName: request.devices?.name || 'Your Device',
                 wgConfig: result.wgConfig,
-                qrCodeDataURL
+                qrCodeDataURL,
+                platform: request.devices?.platform
               });
               req.log.info({ userId: request.user_id, email: profile.email }, "Setup email sent");
             }
