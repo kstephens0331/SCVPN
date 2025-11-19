@@ -145,20 +145,46 @@ export default function PersonalDevices(){
   async function addDevice(){
     setBusy(true); setErr("");
     try {
-      const { data:{ user } } = await supabase.auth.getUser();
+      const { data:{ session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) { setErr("Not signed in"); return; }
       if (!name) { setErr("Please enter a device name."); return; }
       if (!PLATFORMS.includes(platform)) { setErr("Invalid platform."); return; }
 
-      const { error } = await supabase.from("devices").insert({
+      // Insert device
+      const { data: newDevice, error } = await supabase.from("devices").insert({
         user_id: user.id,
         org_id: null,                   // PERSONAL
         name,
         platform,
         is_active: true,
-      });
+      }).select().single();
 
       if (error) { setErr(error.message); return; }
+
+      // Auto-generate WireGuard keys for the new device
+      try {
+        const response = await fetch(`${API_BASE}/api/wireguard/generate-key`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ device_id: newDevice.id })
+        });
+
+        if (response.ok) {
+          alert('✅ Device added and WireGuard keys generated! Check your email for setup instructions.');
+        } else {
+          const result = await response.json();
+          console.warn('Key generation failed:', result.error);
+          alert('Device added, but key generation failed: ' + (result.error || 'Unknown error') + '. Try clicking "Request Key" later.');
+        }
+      } catch (keyError) {
+        console.warn('Key generation error:', keyError);
+        alert('Device added, but key generation failed. Try clicking "Request Key" later.');
+      }
+
       setName(""); setPlatform("android");
       await load();
     } finally {
