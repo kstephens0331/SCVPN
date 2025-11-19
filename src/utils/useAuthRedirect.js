@@ -13,17 +13,19 @@ const roleToDefault = (role) => {
   return "/app/personal/overview";
 };
 
-async function getRole() {
-  console.log("[getRole] Fetching user...");
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  console.log("[getRole] User:", user?.email, "error:", userError);
-  if (!user) return null;
-  // profiles(id uuid PK, role text)
-  console.log("[getRole] Querying profiles for user:", user.id);
+async function getRole(userId) {
+  if (!userId) {
+    console.log("[getRole] No userId provided, fetching from session...");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    userId = user.id;
+  }
+
+  console.log("[getRole] Querying profiles for user:", userId);
   const { data, error } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle();
   console.log("[getRole] Profile data:", data, "error:", error);
   if (error) {
@@ -53,7 +55,8 @@ export default function useAuthRedirect() {
       if (PUBLIC_PATHS.has(loc.pathname)) {
         console.log("[useAuthRedirect] On public path, checking for redirect...");
         const next = new URLSearchParams(loc.search).get("next");
-        const role = await getRole();
+        // Use userId from session to avoid extra getUser() call
+        const role = await getRole(session.user?.id);
         console.log("[useAuthRedirect] Role:", role);
         const fallback = roleToDefault(role);
         const target = (next && next.startsWith("/")) ? next : fallback;
@@ -69,18 +72,23 @@ export default function useAuthRedirect() {
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (evt, sess) => {
-      console.log("[useAuthRedirect] Auth state changed:", evt, "has session:", !!sess);
+      console.log("[useAuthRedirect] Auth state changed:", evt, "has session:", !!sess, "user:", sess?.user?.id);
       console.log("[useAuthRedirect] Current pathname:", loc.pathname, "is public?", PUBLIC_PATHS.has(loc.pathname));
-      if (!sess || hasRedirected) return;
+
+      // Only handle SIGNED_IN events with valid user, and prevent duplicate redirects
+      if (!sess || !sess.user || hasRedirected) return;
+      if (evt !== "SIGNED_IN") return;
+
       if (PUBLIC_PATHS.has(loc.pathname)) {
-        console.log("[useAuthRedirect] On public path, fetching role...");
+        console.log("[useAuthRedirect] On public path, fetching role for user:", sess.user.id);
+        hasRedirected = true; // Set early to prevent race conditions
         const next = new URLSearchParams(loc.search).get("next");
-        const role = await getRole();
+        // Use userId from session to avoid extra getUser() call
+        const role = await getRole(sess.user.id);
         console.log("[useAuthRedirect] Got role:", role);
         const fallback = roleToDefault(role);
         const target = (next && next.startsWith("/")) ? next : fallback;
         console.log("[useAuthRedirect] Auth change - navigating to:", target);
-        hasRedirected = true;
         nav(target, { replace: true });
       } else {
         console.log("[useAuthRedirect] Not on public path, skipping redirect");

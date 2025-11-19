@@ -1,15 +1,14 @@
 import { useState } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 
 export default function Login(){
-  const nav = useNavigate()
   const loc = useLocation()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [err, setErr] = useState("")
   const [loading, setLoading] = useState(false)
-  
+
   // Check for messages from auth callback
   const params = new URLSearchParams(loc.search);
   const message = params.get("message");
@@ -23,14 +22,7 @@ export default function Login(){
     console.log("[Login] Attempting sign in for:", email);
 
     try {
-      // Set a timeout for the sign in attempt
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Sign in timed out. Please try again.")), 15000)
-      );
-
-      const signInPromise = supabase.auth.signInWithPassword({ email, password });
-
-      const { data, error } = await Promise.race([signInPromise, timeoutPromise]);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         console.error("[Login] Sign in error:", error);
@@ -39,54 +31,9 @@ export default function Login(){
         return
       }
 
-      if (!data?.session) {
-        console.error("[Login] No session returned");
-        setErr("Sign in failed. Please check your credentials.");
-        setLoading(false);
-        return;
-      }
-
-      console.log("[Login] Sign in successful, session created");
-
-      // Get user from session directly (faster than another API call)
-      const user = data.session.user;
-
-      if (!user) {
-        setErr("Failed to get user data");
-        setLoading(false);
-        return;
-      }
-
-      console.log("[Login] User:", user.email);
-
-      // Get role from profiles table with timeout
-      const profilePromise = supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const profileTimeout = new Promise((resolve) =>
-        setTimeout(() => resolve({ data: null, error: null }), 5000)
-      );
-
-      const { data: profileData } = await Promise.race([profilePromise, profileTimeout]);
-
-      const role = profileData?.role || "client";
-      console.log("[Login] Role:", role);
-
-      // Determine redirect target
-      const next = new URLSearchParams(loc.search).get("next");
-
-      const roleToDefault = (r) =>
-        r === "admin" ? "/admin" :
-        r === "business" ? "/app/business/overview" :
-        "/app/personal/overview";
-
-      const target = (next && next.startsWith("/")) ? next : roleToDefault(role);
-
-      console.log("[Login] Navigating to:", target);
-      nav(target, { replace: true });
+      // Success - useAuthRedirect will handle navigation via onAuthStateChange
+      console.log("[Login] Sign in successful, useAuthRedirect will handle redirect");
+      // Keep loading state true - redirect will happen automatically
 
     } catch (err) {
       console.error("[Login] Unexpected error:", err);

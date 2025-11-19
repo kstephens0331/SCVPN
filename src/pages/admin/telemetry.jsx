@@ -13,14 +13,25 @@ export default function Telemetry(){
     // Load telemetry with device names
     const { data: telemetryData, error: telemetryError } = await supabase
       .from("device_latest_telemetry")
-      .select("device_id, node_id, is_connected, client_ip, last_handshake, bytes_received, bytes_sent, recorded_at")
+      .select("device_id, node_id, is_connected, client_ip, client_vpn_ip, last_handshake, bytes_received, bytes_sent, recorded_at")
       .order("recorded_at", { ascending: false });
 
     if (telemetryError) {
       console.error("[Telemetry] Error:", telemetryError);
     } else {
       console.log("[Telemetry] Loaded", telemetryData?.length || 0, "entries");
-      setRows(telemetryData || []);
+
+      // Sort: connected first, then by most recent activity
+      const sorted = (telemetryData || []).sort((a, b) => {
+        // Connected devices first
+        if (a.is_connected && !b.is_connected) return -1;
+        if (!a.is_connected && b.is_connected) return 1;
+
+        // Then by most recent recorded_at
+        return new Date(b.recorded_at) - new Date(a.recorded_at);
+      });
+
+      setRows(sorted);
     }
 
     // Load device names
@@ -87,10 +98,21 @@ export default function Telemetry(){
     return date.toLocaleString();
   };
 
+  // Calculate stats
+  const connectedCount = rows.filter(r => r.is_connected).length;
+  const totalCount = rows.length;
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-lime-400">Live Telemetry Feed</h2>
+        <div>
+          <h2 className="text-xl font-bold text-lime-400">Live Telemetry Feed</h2>
+          <p className="text-sm text-gray-400 mt-1">
+            <span className="text-lime-400 font-semibold">{connectedCount}</span> connected
+            {' • '}
+            <span className="text-gray-300">{totalCount}</span> total devices
+          </p>
+        </div>
         <div className="flex gap-4 items-center">
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -123,7 +145,8 @@ export default function Telemetry(){
                 <th className="py-2 pr-3">Platform</th>
                 <th className="py-2 pr-3">Node</th>
                 <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3">Client IP</th>
+                <th className="py-2 pr-3">Public IP</th>
+                <th className="py-2 pr-3">VPN IP</th>
                 <th className="py-2 pr-3">Traffic (↓/↑)</th>
                 <th className="py-2 pr-3">Last Handshake</th>
                 <th className="py-2 pr-3">Last Seen</th>
@@ -153,6 +176,9 @@ export default function Telemetry(){
                     </td>
                     <td className="py-2 pr-3 font-mono text-xs">
                       {r.client_ip || "—"}
+                    </td>
+                    <td className="py-2 pr-3 font-mono text-xs text-gray-400">
+                      {r.client_vpn_ip || "—"}
                     </td>
                     <td className="py-2 pr-3 text-gray-400">
                       {formatBytes(r.bytes_received)} / {formatBytes(r.bytes_sent)}

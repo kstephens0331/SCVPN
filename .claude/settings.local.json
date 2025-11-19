@@ -25,7 +25,15 @@
       "Bash(node -e:*)",
       "Bash(nslookup:*)",
       "Bash(ssh:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(scp:*)",
+      "Bash(where:*)",
+      "Bash(supabase functions deploy:*)",
+      "Bash(ren .env.local .env.local.bak)",
+      "Bash(ren:*)",
+      "Bash(echo:*)",
+      "Read(//c/Users/usmc3/Downloads/**)",
+      "Bash(copy:*)"
     ],
     "deny": [],
     "ask": []
