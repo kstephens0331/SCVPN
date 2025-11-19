@@ -35,10 +35,12 @@ import TermsOfService from "./pages/TermsOfService.jsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 
 import useAuthRedirect from './utils/useAuthRedirect';
+import useAutoLogout from './utils/useAutoLogout';
 
 
 export default function App() {
   useAuthRedirect();
+  useAutoLogout();
   return (
     <Routes>
       <Route path="/app" element={<AppLanding />} />
