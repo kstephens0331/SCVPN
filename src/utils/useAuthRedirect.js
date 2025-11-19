@@ -13,7 +13,7 @@ const roleToDefault = (role) => {
   return "/app/personal/overview";
 };
 
-async function getRole(userId) {
+async function getRole(userId, userEmail) {
   if (!userId) {
     console.log("[getRole] No userId provided, returning default");
     return "client";
@@ -26,7 +26,7 @@ async function getRole(userId) {
     const timeoutPromise = new Promise((resolve) =>
       setTimeout(() => {
         console.log("[getRole] Query timed out, using default role");
-        resolve({ data: null, error: null });
+        resolve({ data: null, error: null, timedOut: true });
       }, 3000)
     );
 
@@ -34,20 +34,32 @@ async function getRole(userId) {
       .from("profiles")
       .select("role")
       .eq("id", userId)
-      .maybeSingle();
+      .maybeSingle()
+      .then(result => ({ ...result, timedOut: false }));
 
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+    const result = await Promise.race([queryPromise, timeoutPromise]);
 
-    console.log("[getRole] Profile data:", data, "error:", error);
-    if (error) {
-      console.error("[getRole] Error fetching profile:", error);
+    console.log("[getRole] Profile data:", result.data, "error:", result.error, "timedOut:", result.timedOut);
+
+    if (result.error || result.timedOut || !result.data) {
+      // Fallback: check if admin email
+      if (userEmail && (userEmail === "info@stephenscode.dev" || userEmail.endsWith("@sacvpn.com"))) {
+        console.log("[getRole] Profile query failed, but email matches admin pattern");
+        return "admin";
+      }
+      console.error("[getRole] Error or timeout fetching profile, using default");
       return "client";
     }
-    const role = data?.role || "client";
+
+    const role = result.data?.role || "client";
     console.log("[getRole] Returning role:", role);
     return role;
   } catch (err) {
     console.error("[getRole] Unexpected error:", err);
+    // Fallback: check if admin email
+    if (userEmail && (userEmail === "info@stephenscode.dev" || userEmail.endsWith("@sacvpn.com"))) {
+      return "admin";
+    }
     return "client";
   }
 }
@@ -70,8 +82,8 @@ export default function useAuthRedirect() {
       if (PUBLIC_PATHS.has(loc.pathname)) {
         console.log("[useAuthRedirect] On public path, checking for redirect...");
         const next = new URLSearchParams(loc.search).get("next");
-        // Use userId from session to avoid extra getUser() call
-        const role = await getRole(session.user?.id);
+        // Use userId and email from session to avoid extra getUser() call
+        const role = await getRole(session.user?.id, session.user?.email);
         console.log("[useAuthRedirect] Role:", role);
         const fallback = roleToDefault(role);
         const target = (next && next.startsWith("/")) ? next : fallback;
@@ -98,8 +110,8 @@ export default function useAuthRedirect() {
         console.log("[useAuthRedirect] On public path, fetching role for user:", sess.user.id);
         hasRedirected = true; // Set early to prevent race conditions
         const next = new URLSearchParams(loc.search).get("next");
-        // Use userId from session to avoid extra getUser() call
-        const role = await getRole(sess.user.id);
+        // Use userId and email from session to avoid extra getUser() call
+        const role = await getRole(sess.user.id, sess.user.email);
         console.log("[useAuthRedirect] Got role:", role);
         const fallback = roleToDefault(role);
         const target = (next && next.startsWith("/")) ? next : fallback;
