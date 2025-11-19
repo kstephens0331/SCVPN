@@ -33,34 +33,39 @@ export function useSessionRole() {
           const uid = session.user.id;
           const email = session.user.email;
 
+          let r = null;
+
           // primary source: profiles.role where id = auth.users.id
-          const { data: p, error: profileError } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", uid)
-            .maybeSingle(); // Use maybeSingle() instead of single() to avoid error if profile doesn't exist
+          try {
+            const timeoutPromise = new Promise((resolve) =>
+              setTimeout(() => resolve({ data: null, error: null }), 3000)
+            );
 
-          if (profileError) {
-            console.error("[useSessionRole] Profile query error:", profileError);
-          }
-
-          let r = p?.role ?? null;
-          console.log("[useSessionRole] Profile role:", r);
-
-          // fallback: treat as admin if listed in admin_emails (or your "authorization" table)
-          if (!r && email) {
-            const { data: adminRow, error: adminError } = await supabase
-              .from("admin_emails")
-              .select("email,is_admin,role")
-              .eq("email", email)
+            const queryPromise = supabase
+              .from("profiles")
+              .select("role")
+              .eq("id", uid)
               .maybeSingle();
 
-            if (adminError) {
-              console.error("[useSessionRole] Admin query error:", adminError);
+            const { data: p, error: profileError } = await Promise.race([queryPromise, timeoutPromise]);
+
+            if (profileError) {
+              console.error("[useSessionRole] Profile query error:", profileError);
             }
 
-            if (adminRow?.is_admin || adminRow?.role === "admin") r = "admin";
-            console.log("[useSessionRole] Admin check result:", r);
+            r = p?.role ?? null;
+            console.log("[useSessionRole] Profile role:", r);
+          } catch (err) {
+            console.error("[useSessionRole] Profile query failed:", err);
+          }
+
+          // fallback: check email for admin
+          if (!r && email) {
+            // Quick email check fallback
+            if (email === "info@stephenscode.dev" || email.endsWith("@sacvpn.com")) {
+              r = "admin";
+              console.log("[useSessionRole] Admin detected by email fallback");
+            }
           }
 
           // Default to 'client' if no role found
@@ -87,30 +92,36 @@ export function useSessionRole() {
       try {
         setSession(s);
         if (s?.user) {
-          const { data: p, error: profileError } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", s.user.id)
-            .maybeSingle(); // Use maybeSingle() instead of single() to avoid error if profile doesn't exist
+          let r = null;
 
-          if (profileError) {
-            console.error("[useSessionRole] Auth change profile error:", profileError);
-          }
+          // Query profile with timeout
+          try {
+            const timeoutPromise = new Promise((resolve) =>
+              setTimeout(() => resolve({ data: null, error: null }), 3000)
+            );
 
-          let r = p?.role ?? null;
-
-          if (!r && s.user.email) {
-            const { data: adminRow, error: adminError } = await supabase
-              .from("admin_emails")
-              .select("email,is_admin,role")
-              .eq("email", s.user.email)
+            const queryPromise = supabase
+              .from("profiles")
+              .select("role")
+              .eq("id", s.user.id)
               .maybeSingle();
 
-            if (adminError) {
-              console.error("[useSessionRole] Auth change admin error:", adminError);
+            const { data: p, error: profileError } = await Promise.race([queryPromise, timeoutPromise]);
+
+            if (profileError) {
+              console.error("[useSessionRole] Auth change profile error:", profileError);
             }
 
-            if (adminRow?.is_admin || adminRow?.role === "admin") r = "admin";
+            r = p?.role ?? null;
+          } catch (err) {
+            console.error("[useSessionRole] Auth change profile query failed:", err);
+          }
+
+          // Fallback: check email for admin
+          if (!r && s.user.email) {
+            if (s.user.email === "info@stephenscode.dev" || s.user.email.endsWith("@sacvpn.com")) {
+              r = "admin";
+            }
           }
 
           setRole(r || 'client');
