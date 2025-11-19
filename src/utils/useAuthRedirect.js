@@ -15,26 +15,41 @@ const roleToDefault = (role) => {
 
 async function getRole(userId) {
   if (!userId) {
-    console.log("[getRole] No userId provided, fetching from session...");
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    userId = user.id;
+    console.log("[getRole] No userId provided, returning default");
+    return "client";
   }
 
   console.log("[getRole] Querying profiles for user:", userId);
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
-  console.log("[getRole] Profile data:", data, "error:", error);
-  if (error) {
-    console.error("[getRole] Error fetching profile:", error);
-    return null;
+
+  try {
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((resolve) =>
+      setTimeout(() => {
+        console.log("[getRole] Query timed out, using default role");
+        resolve({ data: null, error: null });
+      }, 3000)
+    );
+
+    const queryPromise = supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+    console.log("[getRole] Profile data:", data, "error:", error);
+    if (error) {
+      console.error("[getRole] Error fetching profile:", error);
+      return "client";
+    }
+    const role = data?.role || "client";
+    console.log("[getRole] Returning role:", role);
+    return role;
+  } catch (err) {
+    console.error("[getRole] Unexpected error:", err);
+    return "client";
   }
-  const role = data?.role || "client";
-  console.log("[getRole] Returning role:", role);
-  return role;
 }
 
 export default function useAuthRedirect() {
