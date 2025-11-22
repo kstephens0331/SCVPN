@@ -1,0 +1,19 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Block authenticated areas
+Disallow: /app/
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /login
+Disallow: /auth/
+
+# Block checkout pages (no SEO value)
+Disallow: /post-checkout
+
+# Sitemap location
+Sitemap: https://www.sacvpn.com/sitemap.xml
+
+# Crawl-delay (optional, helps prevent server overload)
+Crawl-delay: 1

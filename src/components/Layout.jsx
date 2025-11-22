@@ -11,6 +11,7 @@ export default function Layout(){
           </Link>
           <nav className="flex gap-6 text-sm">
             <Link to="/pricing" className="hover:underline text-red-600">Pricing</Link>
+            <Link to="/blog" className="hover:underline text-red-600">Blog</Link>
             <Link to="/faq" className="hover:underline text-red-600">FAQ</Link>
             <Link to="/about" className="hover:underline text-red-600">About</Link>
             <Link to="/contact" className="hover:underline text-red-600">Contact</Link>
@@ -32,6 +33,7 @@ export default function Layout(){
             <span>© {new Date().getFullYear()} SACVPN — All rights reserved.</span>
             <nav className="flex gap-4">
               <Link to="/pricing" className="hover:underline">Pricing</Link>
+              <Link to="/blog" className="hover:underline">Blog</Link>
               <Link to="/faq" className="hover:underline">FAQ</Link>
               <Link to="/about" className="hover:underline">About</Link>
               <Link to="/contact" className="hover:underline">Contact</Link>
