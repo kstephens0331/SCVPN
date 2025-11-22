@@ -1,4 +1,5 @@
 import { motion } from "framer-motion"; // eslint-disable-line no-unused-vars
+import { Helmet } from "react-helmet-async";
 import CheckItem from "../components/CheckItem.jsx";
 
 const fadeIn = (delay = 0) => ({
@@ -10,22 +11,30 @@ const fadeIn = (delay = 0) => ({
 
 export default function About(){
   return (
-    <section className="container-xl py-16">
-      {/* Hero */}
-      <motion.div
-        className="text-center max-w-3xl mx-auto"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <p className="text-secondary font-semibold uppercase tracking-wide">About Us</p>
-        <h1 className="text-5xl font-bold text-primary mt-2">Why we created SACVPN</h1>
-        <p className="mt-4 text-lg text-gray-700">
-          SACVPN exists to make private, fast, and secure internet access available to everyone - individuals, gamers, and businesses.
-          We are builders and network engineers who were tired of bloated VPNs, confusing pricing, and weak performance. So we designed
-          a service that is simple, honest, and engineered for speed.
-        </p>
-      </motion.div>
+    <>
+      <Helmet>
+        <title>About SACVPN - WireGuard VPN Service for Privacy & Security</title>
+        <meta name="description" content="Learn about SACVPN's mission to provide secure, fast VPN service using WireGuard protocol. Discover our no-logs privacy policy, transparent pricing, and commitment to online security." />
+        <meta name="keywords" content="about SACVPN, VPN company, WireGuard VPN provider, online privacy, secure VPN service, no-logs VPN, VPN for business, VPN for gaming" />
+        <link rel="canonical" href="https://www.sacvpn.com/about" />
+      </Helmet>
+
+      <section className="container-xl py-16">
+        {/* Hero */}
+        <motion.div
+          className="text-center max-w-3xl mx-auto"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <p className="text-secondary font-semibold uppercase tracking-wide">About SACVPN</p>
+          <h1 className="text-5xl font-bold text-primary mt-2">Why We Created SACVPN - Your Trusted VPN Service Provider</h1>
+          <p className="mt-4 text-lg text-gray-700">
+            SACVPN exists to make private, fast, and secure internet access available to everyone - individuals, gamers, and businesses.
+            We are builders and network engineers who were tired of bloated VPNs, confusing pricing, and weak performance. So we designed
+            a secure VPN service powered by WireGuard technology that is simple, honest, and engineered for maximum speed and privacy protection.
+          </p>
+        </motion.div>
 
       {/* Origin story */}
       <motion.div className="card p-8 mt-12" {...fadeIn(0.1)}>
@@ -210,17 +219,19 @@ export default function About(){
         transition={{ duration: 0.5 }}
         viewport={{ once: true }}
       >
-        <h2 className="text-3xl font-bold">Your privacy. Your speed. Built for people and teams.</h2>
+        <h2 className="text-3xl font-bold">Your Privacy. Your Speed. Secure VPN Service Built for People and Teams.</h2>
         <p className="mt-4 text-lg">
-          We built SACVPN for households, gamers, and businesses that want private, fast, and simple protection on every device.
-          If that sounds like you, join us and take control of your connection.
+          We built SACVPN VPN service for households, gamers, and businesses that want private, fast, and simple online protection on every device.
+          With our WireGuard-powered VPN, strict no-logs policy, and transparent pricing, you get enterprise-grade security without the complexity.
+          If that sounds like you, join us and take control of your internet connection today.
         </p>
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-          <a href="/pricing#personal" className="button-primary">See Personal & Gaming</a>
-          <a href="/pricing#business" className="button-outline">See Business Tiers</a>
+          <a href="/pricing#personal" className="button-primary">See Personal & Gaming VPN Plans</a>
+          <a href="/pricing#business" className="button-outline">See Business VPN Tiers</a>
         </div>
       </motion.div>
     </section>
+    </>
   );
 }
 

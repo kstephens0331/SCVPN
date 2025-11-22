@@ -1,6 +1,7 @@
 // src/pages/PricingFinal.jsx
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Check, TrendingDown } from "lucide-react";
 import {
   BILLING_PERIODS,
@@ -59,16 +60,23 @@ export default function PricingFinal() {
 
   return (
     <>
+      <Helmet>
+        <title>VPN Pricing Plans - Affordable Secure VPN Service | SACVPN</title>
+        <meta name="description" content="SACVPN VPN pricing: Personal plan $7.99/mo, Gaming VPN $11.99/mo, Business VPN from $149/mo. Unlimited devices, WireGuard protocol, no-logs policy. Save up to 45% with annual plans." />
+        <meta name="keywords" content="VPN pricing, cheap VPN, affordable VPN, VPN plans, business VPN pricing, gaming VPN cost, VPN subscription, WireGuard VPN price" />
+        <link rel="canonical" href="https://www.sacvpn.com/pricing" />
+      </Helmet>
+
       <section className="bg-gradient-to-b from-background to-white py-20 text-center">
         <div className="container-xl">
           <h1 className="text-5xl font-extrabold text-primary">
-            Simple, Transparent Pricing
+            Affordable VPN Pricing Plans - Simple & Transparent
           </h1>
           <p className="mt-4 text-lg text-gray-700 max-w-2xl mx-auto">
-            No hidden fees. No contracts. Cancel anytime. Save up to 45% with our 3-year plans.
+            Choose the best VPN plan for your needs. No hidden fees. No contracts. Cancel your VPN subscription anytime. Save up to 45% with our long-term VPN plans.
           </p>
           <p className="mt-2 text-sm text-gray-600">
-            All prices shown clearly - choose the billing period that works best for you
+            All VPN pricing shown clearly upfront - select the billing period that works best for you
           </p>
 
           {/* Quick jump links */}
@@ -89,9 +97,9 @@ export default function PricingFinal() {
 
           {/* Personal & Gaming */}
           <div id="personal" className="mt-12">
-            <h2 className="text-3xl font-semibold">Personal & Gaming</h2>
+            <h2 className="text-3xl font-semibold">Personal & Gaming VPN Plans</h2>
             <p className="text-gray-700 mt-2">
-              Unlimited devices on both plans. Gaming adds optimized routes for lower latency.
+              Connect unlimited devices on both VPN plans. Gaming VPN adds optimized routes for lower latency and reduced lag during online gaming.
             </p>
             <div className="grid md:grid-cols-2 gap-8 mt-8 max-w-6xl mx-auto">
               {personalPlans.map((plan) => (
