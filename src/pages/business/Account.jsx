@@ -46,14 +46,14 @@ export default function BusinessAccount(){
     let cap = null;
     if (o?.plan === "business10") cap = 10;
     if (o?.plan === "business50") cap = 50;
-    if (o?.plan === "business250") cap = 250;
+    if (o?.plan === "business100") cap = 100;
 
     setCounts({ users: userCount || 0, cap });
   })(); },[orgId]);
 
   const planLabel = useMemo(()=>{
-    if (!org?.plan) return "—";
-    const map = { free:"Free", pro:"Pro", enterprise:"Enterprise", personal:"Personal", gaming:"Gaming", business10:"Business 10", business50:"Business 50", business250:"Business 250" };
+    if (!org?.plan) return "ï¿½";
+    const map = { free:"Free", pro:"Pro", enterprise:"Enterprise", personal:"Personal", gaming:"Gaming", business10:"Business 10", business50:"Business 50", business100:"Business 100" };
     return map[org.plan] || org.plan;
   },[org]);
 
@@ -93,7 +93,7 @@ export default function BusinessAccount(){
               </div>
               <div className="rounded-lg bg-black/30 p-4 ring-1 ring-gray-800">
                 <div className="text-xs text-gray-400">Created</div>
-                <div className="text-base">{org.created_at ? new Date(org.created_at).toLocaleDateString() : "—"}</div>
+                <div className="text-base">{org.created_at ? new Date(org.created_at).toLocaleDateString() : "ï¿½"}</div>
               </div>
             </div>
 

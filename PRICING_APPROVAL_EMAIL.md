@@ -1,42 +1,48 @@
-# SACVPN Final Pricing Structure - Approved for Implementation
+# SACVPN Final Pricing Structure - Updated December 2025
 
 **To:** info@stephenscode.dev
 **From:** SACVPN Pricing Analysis
-**Date:** October 25, 2025
-**Subject:** FINAL PRICING APPROVAL - All Profit Margins Verified
+**Date:** December 3, 2025
+**Subject:** UPDATED PRICING - Competitive Market Positioning
 
 ---
 
 ## EXECUTIVE SUMMARY
 
-All pricing has been calculated and verified to maintain target profit margins across all billing periods:
+Pricing updated to be competitive with market leaders while maintaining healthy margins. Volume discounts reward larger customers.
 
-✅ **Monthly:** 55% profit margin
-✅ **6-Month:** 50% profit margin (10% customer discount)
-✅ **Yearly:** 45% profit margin (18.2% customer discount)
-✅ **2-Year:** 40% profit margin (25% customer discount)
-✅ **3-Year:** 35% profit margin (30.8% customer discount)
+**Pricing Philosophy:**
+- **Small teams (10-100 users):** $8-10/user - premium for support overhead
+- **Mid-size (500-1K users):** $6-7/user - competitive with NordLayer
+- **Enterprise (2.5K-10K users):** $4.50-5.50/user - aggressive volume discount
+
+**Billing Period Discounts:**
+- Monthly: Base price
+- 6-Month: 10% off
+- Yearly: 20% off
+- 2-Year: 30% off
+- 3-Year: 45% off
 
 ---
 
 ## SERVER INFRASTRUCTURE
 
-### Consumer Plans
+### Consumer Plans (Lower-tier servers @ $220/month)
+- **Capacity:** ~160 devices per server (80% load, 25 Mbps/device, 20% concurrent)
+- **Bandwidth:** 1 Gbps unmetered
 
-**Personal VPS:** $60/month (1 Gbps @ 75% load)
-- Capacity: 100 users per server
-- Bandwidth per user: 7.5 Mbps average
+### Business Plans 10-100 (Lower-tier servers @ $220/month)
+- Same specs as consumer
+- Dedicated server partitioning
 
-**Gaming VPS:** $3,500/month (100 Gbps @ 70% load to minimize lag)
-- Capacity: 3,500 users per server
-- Bandwidth per user: 20 Mbps average
+### Enterprise Plans 500+ (Enterprise servers @ $450/month)
+- **CPU:** Intel Xeon Gold 6426Y (16c/32t)
+- **RAM:** 128GB DDR5 ECC
+- **Storage:** 2x 960GB NVMe RAID
+- **Bandwidth:** 5 Gbps unmetered
+- **Capacity:** ~800 devices per server (80% load)
 
-### Business Plans
-
-**OVH SCALE-1 Server:** $420/month (5 Gbps public, 50 Gbps private @ 75% load)
-- Capacity: 187 devices per server
-- Bandwidth per device: 20 Mbps business usage
-- Max usable: 3,750 Mbps (75% of 5 Gbps)
+**Note:** Each user gets 3 devices, so Business 500 = 1,500 devices
 
 ---
 
@@ -44,319 +50,269 @@ All pricing has been calculated and verified to maintain target profit margins a
 
 ### CONSUMER PLANS
 
-#### Personal Plan - $9.99/month
+#### Personal Plan - Unlimited Devices
 
-| Billing Period | Total Price | Monthly Equivalent | Discount | Profit Margin |
-|----------------|-------------|-------------------|----------|---------------|
-| Monthly | $9.99 | $9.99 | 0% | 94.0% |
-| 6-Month | $53.95 | $8.99 | 10% | 93.3% |
-| Yearly | $98.06 | $8.17 | 18.2% | 92.7% |
-| 2-Year | $179.82 | $7.49 | 25% | 92.0% |
-| 3-Year | $248.87 | $6.91 | 30.8% | 91.3% |
+| Billing Period | Monthly Equiv | Total Price | Savings |
+|----------------|---------------|-------------|---------|
+| Monthly | $9.99 | $9.99 | - |
+| 6-Month | $8.99 | $53.94 | $6.00 |
+| Yearly | $8.17 | $98.06 | $21.82 |
+| 2-Year | $6.99 | $167.76 | $72.00 |
+| 3-Year | $6.91 | $248.87 | $110.77 |
 
-**Per Server Economics:**
-- Cost: $60/month
-- Revenue: $999/month (100 users)
-- Profit: $939/month
-- Annual Profit: $11,268/year
+**Stripe Price IDs:**
+- Monthly: `price_1SL6ArDcTrtfdJcSCdOK5tBa`
+- 6-Month: `price_1SL6DKDcTrtfdJcS6xphfsqf`
+- Yearly: `price_1SL6DKDcTrtfdJcSiLG9XRBa`
+- 2-Year: `price_1SL6DKDcTrtfdJcSEeHfSuUm`
+- 3-Year: `price_1SL6DKDcTrtfdJcSfDX6PVCw`
 
 ---
 
-#### Gaming Plan - $14.99/month
+#### Gaming Plan - Unlimited Devices
 
-| Billing Period | Total Price | Monthly Equivalent | Discount | Profit Margin |
-|----------------|-------------|-------------------|----------|---------------|
-| Monthly | $14.99 | $14.99 | 0% | 93.3% |
-| 6-Month | $80.95 | $13.49 | 10% | 92.6% |
-| Yearly | $147.14 | $12.26 | 18.2% | 91.8% |
-| 2-Year | $269.82 | $11.24 | 25% | 91.1% |
-| 3-Year | $373.43 | $10.37 | 30.8% | 90.4% |
+| Billing Period | Monthly Equiv | Total Price | Savings |
+|----------------|---------------|-------------|---------|
+| Monthly | $14.99 | $14.99 | - |
+| 6-Month | $13.49 | $80.94 | $9.00 |
+| Yearly | $12.26 | $147.14 | $32.74 |
+| 2-Year | $10.49 | $251.76 | $108.00 |
+| 3-Year | $10.37 | $373.43 | $166.21 |
 
-**Per Server Economics:**
-- Cost: $3,500/month
-- Revenue: $52,465/month (3,500 users)
-- Profit: $48,965/month
-- Annual Profit: $587,580/year
+**Stripe Price IDs:**
+- Monthly: `price_1SL6EeDcTrtfdJcSrQ5XO4vb`
+- 6-Month: `price_1SL6GSDcTrtfdJcSpeAWPnhl`
+- Yearly: `price_1SL6GSDcTrtfdJcSjsNOtdeL`
+- 2-Year: `price_1SL6GSDcTrtfdJcS07yDIIBA`
+- 3-Year: `price_1SL6GSDcTrtfdJcSGgXCNdCm`
 
 ---
 
 ### BUSINESS PLANS
 
-All business plans use OVH SCALE-1 servers at $420/month with 20 Mbps per device allocation.
+#### Business 10 - 10 Users (30 devices) @ $10/user
 
-#### Business 50 - 50 devices
+| Billing Period | $/user | Monthly Equiv | Total Price | Savings |
+|----------------|--------|---------------|-------------|---------|
+| Monthly | $10.00 | $100.00 | $100.00 | - |
+| 6-Month | $9.00 | $90.00 | $540.00 | $60.00 |
+| Yearly | $8.00 | $80.00 | $960.00 | $240.00 |
+| 2-Year | $7.00 | $70.00 | $1,680.00 | $720.00 |
+| 3-Year | $5.50 | $55.00 | $1,980.00 | $1,620.00 |
 
-| Billing Period | Total Price | Monthly Equivalent | Price per Device | Profit Margin |
-|----------------|-------------|-------------------|------------------|---------------|
-| Monthly | $933.33 | $933.33 | $18.67 | 55.0% |
-| 6-Month | $5,040.00 | $840.00 | $16.80 | 50.0% |
-| Yearly | $9,163.64 | $763.64 | $15.27 | 45.0% |
-| 2-Year | $16,800.00 | $700.00 | $14.00 | 40.0% |
-| 3-Year | $23,261.54 | $646.15 | $12.92 | 35.0% |
-
-**Servers:** 1
-**Stripe Price IDs:** 5 (one per billing period)
-
----
-
-#### Business 100 - 100 devices
-
-| Billing Period | Total Price | Monthly Equivalent | Price per Device | Profit Margin |
-|----------------|-------------|-------------------|------------------|---------------|
-| Monthly | $933.33 | $933.33 | $9.33 | 55.0% |
-| 6-Month | $5,040.00 | $840.00 | $8.40 | 50.0% |
-| Yearly | $9,163.64 | $763.64 | $7.64 | 45.0% |
-| 2-Year | $16,800.00 | $700.00 | $7.00 | 40.0% |
-| 3-Year | $23,261.54 | $646.15 | $6.46 | 35.0% |
-
-**Servers:** 1
-**Stripe Price IDs:** 5 (one per billing period)
+**Stripe Price IDs:**
+- Monthly: `price_1SL6LKDcTrtfdJcSsv0N2h0U`
+- 6-Month: `price_1SL6NvDcTrtfdJcSF8TU1DQI`
+- Yearly: `price_1SL6NvDcTrtfdJcSZiHdLWYL`
+- 2-Year: `price_1SL6NvDcTrtfdJcS4RaSp1B8`
+- 3-Year: `price_1SL6NvDcTrtfdJcStBvHeVN4`
 
 ---
 
-#### Business 500 - 500 devices
+#### Business 50 - 50 Users (150 devices) @ $9/user
 
-| Billing Period | Total Price | Monthly Equivalent | Price per Device | Profit Margin |
-|----------------|-------------|-------------------|------------------|---------------|
-| Monthly | $2,800.00 | $2,800.00 | $5.60 | 55.0% |
-| 6-Month | $15,120.00 | $2,520.00 | $5.04 | 50.0% |
-| Yearly | $27,490.91 | $2,290.91 | $4.58 | 45.0% |
-| 2-Year | $50,400.00 | $2,100.00 | $4.20 | 40.0% |
-| 3-Year | $69,784.62 | $1,938.46 | $3.88 | 35.0% |
+| Billing Period | $/user | Monthly Equiv | Total Price | Savings |
+|----------------|--------|---------------|-------------|---------|
+| Monthly | $9.00 | $450.00 | $450.00 | - |
+| 6-Month | $8.10 | $405.00 | $2,430.00 | $270.00 |
+| Yearly | $7.20 | $360.00 | $4,320.00 | $1,080.00 |
+| 2-Year | $6.30 | $315.00 | $7,560.00 | $3,240.00 |
+| 3-Year | $4.95 | $247.50 | $8,910.00 | $7,290.00 |
 
-**Servers:** 3
-**Stripe Price IDs:** 5 (one per billing period)
-
----
-
-#### Business 1K - 1,000 devices
-
-| Billing Period | Total Price | Monthly Equivalent | Price per Device | Profit Margin |
-|----------------|-------------|-------------------|------------------|---------------|
-| Monthly | $5,600.00 | $5,600.00 | $5.60 | 55.0% |
-| 6-Month | $30,240.00 | $5,040.00 | $5.04 | 50.0% |
-| Yearly | $54,981.82 | $4,581.82 | $4.58 | 45.0% |
-| 2-Year | $100,800.00 | $4,200.00 | $4.20 | 40.0% |
-| 3-Year | $139,569.23 | $3,876.92 | $3.88 | 35.0% |
-
-**Servers:** 6
-**Stripe Price IDs:** 5 (one per billing period)
+**Stripe Price IDs:**
+- Monthly: `price_1SL6P2DcTrtfdJcSZKV2be1J`
+- 6-Month: `price_1SL6RVDcTrtfdJcSIQK1pZ1l`
+- Yearly: `price_1SL6RVDcTrtfdJcSl6s6dozT`
+- 2-Year: `price_1SL6RVDcTrtfdJcSd49Io0Zg`
+- 3-Year: `price_1SL6RVDcTrtfdJcSqpYoEYda`
 
 ---
 
-#### Business 2.5K - 2,500 devices
+#### Business 100 - 100 Users (300 devices) @ $8/user
 
-| Billing Period | Total Price | Monthly Equivalent | Price per Device | Profit Margin |
-|----------------|-------------|-------------------|------------------|---------------|
-| Monthly | $13,066.67 | $13,066.67 | $5.23 | 55.0% |
-| 6-Month | $70,560.00 | $11,760.00 | $4.70 | 50.0% |
-| Yearly | $128,290.91 | $10,690.91 | $4.28 | 45.0% |
-| 2-Year | $235,200.00 | $9,800.00 | $3.92 | 40.0% |
-| 3-Year | $325,661.54 | $9,046.15 | $3.62 | 35.0% |
+| Billing Period | $/user | Monthly Equiv | Total Price | Savings |
+|----------------|--------|---------------|-------------|---------|
+| Monthly | $8.00 | $800.00 | $800.00 | - |
+| 6-Month | $7.20 | $720.00 | $4,320.00 | $480.00 |
+| Yearly | $6.40 | $640.00 | $7,680.00 | $1,920.00 |
+| 2-Year | $5.60 | $560.00 | $13,440.00 | $5,760.00 |
+| 3-Year | $4.40 | $440.00 | $15,840.00 | $12,960.00 |
 
-**Servers:** 14
-**Stripe Price IDs:** 5 (one per billing period)
-
----
-
-#### Business 5K - 5,000 devices
-
-| Billing Period | Total Price | Monthly Equivalent | Price per Device | Profit Margin |
-|----------------|-------------|-------------------|------------------|---------------|
-| Monthly | $25,200.00 | $25,200.00 | $5.04 | 55.0% |
-| 6-Month | $136,080.00 | $22,680.00 | $4.54 | 50.0% |
-| Yearly | $247,418.18 | $20,618.18 | $4.12 | 45.0% |
-| 2-Year | $453,600.00 | $18,900.00 | $3.78 | 40.0% |
-| 3-Year | $628,061.54 | $17,446.15 | $3.49 | 35.0% |
-
-**Servers:** 27
-**Stripe Price IDs:** 5 (one per billing period)
+**Stripe Price IDs:**
+- Monthly: `price_1SL6SBDcTrtfdJcSxVRuFSPi`
+- 6-Month: `price_1SL6TyDcTrtfdJcSfCTdSBEH`
+- Yearly: `price_1SL6TyDcTrtfdJcSxWtVJagx`
+- 2-Year: `price_1SL6TyDcTrtfdJcSBHsUgEXc`
+- 3-Year: `price_1SL6TyDcTrtfdJcSUQrzlkTG`
 
 ---
 
-#### Business 10K - 10,000 devices
+### ENTERPRISE PLANS
 
-| Billing Period | Total Price | Monthly Equivalent | Price per Device | Profit Margin |
-|----------------|-------------|-------------------|------------------|---------------|
-| Monthly | $50,400.00 | $50,400.00 | $5.04 | 55.0% |
-| 6-Month | $272,160.00 | $45,360.00 | $4.54 | 50.0% |
-| Yearly | $494,836.36 | $41,236.36 | $4.12 | 45.0% |
-| 2-Year | $907,200.00 | $37,800.00 | $3.78 | 40.0% |
-| 3-Year | $1,256,123.08 | $34,892.31 | $3.49 | 35.0% |
+#### Business 500 - 500 Users (1,500 devices) @ $7/user
 
-**Servers:** 54
-**Stripe Price IDs:** 5 (one per billing period)
+**Servers Required:** 2 ($900/month cost)
+**Profit Margin:** 74%
 
----
+| Billing Period | $/user | Monthly Equiv | Total Price | Savings |
+|----------------|--------|---------------|-------------|---------|
+| Monthly | $7.00 | $3,500.00 | $3,500.00 | - |
+| 6-Month | $6.30 | $3,150.00 | $18,900.00 | $2,100.00 |
+| Yearly | $5.60 | $2,800.00 | $33,600.00 | $8,400.00 |
+| 2-Year | $4.90 | $2,450.00 | $58,800.00 | $25,200.00 |
+| 3-Year | $3.85 | $1,925.00 | $69,300.00 | $56,700.00 |
 
-## IMPLEMENTATION REQUIREMENTS
-
-### Total Stripe Products & Prices to Create:
-
-**Consumer Plans:**
-- Personal: 5 price IDs (monthly, 6-month, yearly, 2-year, 3-year)
-- Gaming: 5 price IDs
-
-**Business Plans:**
-- Business 50: 5 price IDs
-- Business 100: 5 price IDs
-- Business 500: 5 price IDs
-- Business 1K: 5 price IDs
-- Business 2.5K: 5 price IDs
-- Business 5K: 5 price IDs
-- Business 10K: 5 price IDs
-
-**TOTAL: 45 Stripe Price IDs**
+**Stripe Price IDs:** (To be created)
+- Monthly: `price_TBD_business500_monthly`
+- 6-Month: `price_TBD_business500_6mo`
+- Yearly: `price_TBD_business500_yearly`
+- 2-Year: `price_TBD_business500_2yr`
+- 3-Year: `price_TBD_business500_3yr`
 
 ---
 
-## DATABASE UPDATES REQUIRED
+#### Business 1K - 1,000 Users (3,000 devices) @ $6/user
 
-1. **Run SQL Migration:** `FINAL_PRICING_WITH_MARGINS.sql`
-   - Creates all 45 pricing plan entries
-   - Updates MRR/ARR analytics functions
-   - Maintains backward compatibility with existing customers
+**Servers Required:** 4 ($1,800/month cost)
+**Profit Margin:** 70%
 
-2. **Update Frontend:** `src/lib/pricing.js`
-   - Update all plan pricing with $420 server cost
-   - Add billing period selectors
-   - Update Stripe Price IDs after creation
+| Billing Period | $/user | Monthly Equiv | Total Price | Savings |
+|----------------|--------|---------------|-------------|---------|
+| Monthly | $6.00 | $6,000.00 | $6,000.00 | - |
+| 6-Month | $5.40 | $5,400.00 | $32,400.00 | $3,600.00 |
+| Yearly | $4.80 | $4,800.00 | $57,600.00 | $14,400.00 |
+| 2-Year | $4.20 | $4,200.00 | $100,800.00 | $43,200.00 |
+| 3-Year | $3.30 | $3,300.00 | $118,800.00 | $97,200.00 |
 
-3. **Create Stripe Products:**
-   - Follow `STRIPE_SETUP_COMPLETE.md` guide
-   - Create 9 products (Personal, Gaming, Business 50-10K)
-   - Create 5 prices per product
-
----
-
-## KEY COMPETITIVE ADVANTAGES
-
-### vs NordLayer (Primary Business VPN Competitor)
-
-| Metric | SACVPN | NordLayer |
-|--------|--------|-----------|
-| 500 devices | $2,800/mo ($5.60/device) | ~$2,500/mo (~$5/device) |
-| 1,000 devices | $5,600/mo ($5.60/device) | ~$5,000/mo (~$5/device) |
-| 5,000 devices | $25,200/mo ($5.04/device) | ~$25,000/mo (~$5/device) |
-| **Pricing Model** | Transparent, no "contact sales" | Hidden enterprise pricing |
-| **3-Year Savings** | 30.8% discount | Unknown |
-
-**We are competitively priced while maintaining 35-55% margins!**
+**Stripe Price IDs:** (To be created)
+- Monthly: `price_TBD_business1k_monthly`
+- 6-Month: `price_TBD_business1k_6mo`
+- Yearly: `price_TBD_business1k_yearly`
+- 2-Year: `price_TBD_business1k_2yr`
+- 3-Year: `price_TBD_business1k_3yr`
 
 ---
 
-## CUSTOMER VALUE PROPOSITION
+#### Business 2.5K - 2,500 Users (7,500 devices) @ $5.50/user
 
-### Why Choose 3-Year Plans?
+**Servers Required:** 10 ($4,500/month cost)
+**Profit Margin:** 67%
 
-**Business 500 Example:**
-- Monthly: $2,800/mo × 36 months = $100,800
-- 3-Year: $69,784.62 (one payment)
-- **Customer saves: $31,015.38 over 3 years**
-- **We still maintain 35% profit margin**
+| Billing Period | $/user | Monthly Equiv | Total Price | Savings |
+|----------------|--------|---------------|-------------|---------|
+| Monthly | $5.50 | $13,750.00 | $13,750.00 | - |
+| 6-Month | $4.95 | $12,375.00 | $74,250.00 | $8,250.00 |
+| Yearly | $4.40 | $11,000.00 | $132,000.00 | $33,000.00 |
+| 2-Year | $3.85 | $9,625.00 | $231,000.00 | $99,000.00 |
+| 3-Year | $3.03 | $7,562.50 | $272,250.00 | $222,750.00 |
 
-**Business 5K Example:**
-- Monthly: $25,200/mo × 36 months = $907,200
-- 3-Year: $628,061.54 (one payment)
-- **Customer saves: $279,138.46 over 3 years**
-- **We still maintain 35% profit margin**
-
----
-
-## FUTURE OPTIMIZATION OPPORTUNITIES
-
-### For Business 5K & 10K Plans:
-
-When customer base grows to require 20+ servers:
-
-1. **Negotiate OVH Volume Discounts:**
-   - Target: 10-15% discount on bulk orders
-   - Potential savings: $42-63 per server
-   - Business 10K savings: $2,268-3,402/month
-
-2. **Consider Larger Servers:**
-   - Check OVH pricing for 20-40 Gbps servers
-   - Reduce server count (54× 5 Gbps → 7× 40 Gbps)
-   - Simplify infrastructure management
-   - Pass savings to customers OR increase margins
-
-3. **Enterprise Dedicated Pricing:**
-   - For Fortune 500 customers (100K+ devices)
-   - Custom SLAs and white-glove support
-   - Bulk server discounts (30-40% off)
+**Stripe Price IDs:** (To be created)
+- Monthly: `price_TBD_business2500_monthly`
+- 6-Month: `price_TBD_business2500_6mo`
+- Yearly: `price_TBD_business2500_yearly`
+- 2-Year: `price_TBD_business2500_2yr`
+- 3-Year: `price_TBD_business2500_3yr`
 
 ---
 
-## PROFIT PROJECTIONS
+#### Business 5K - 5,000 Users (15,000 devices) @ $5/user
 
-### Conservative Scale Scenario (First Year)
+**Servers Required:** 19 ($8,550/month cost)
+**Profit Margin:** 66%
 
-**Assumptions:**
-- 1,000 Personal users (10 servers)
-- 5,000 Gaming users (2 servers)
-- 10 Business customers (mix of tiers)
+| Billing Period | $/user | Monthly Equiv | Total Price | Savings |
+|----------------|--------|---------------|-------------|---------|
+| Monthly | $5.00 | $25,000.00 | $25,000.00 | - |
+| 6-Month | $4.50 | $22,500.00 | $135,000.00 | $15,000.00 |
+| Yearly | $4.00 | $20,000.00 | $240,000.00 | $60,000.00 |
+| 2-Year | $3.50 | $17,500.00 | $420,000.00 | $180,000.00 |
+| 3-Year | $2.75 | $13,750.00 | $495,000.00 | $405,000.00 |
 
-**Monthly Revenue:** ~$120,000
-**Monthly Costs:** ~$8,000
-**Monthly Profit:** ~$112,000 (93% margin)
-**Annual Profit:** ~$1,344,000
-
-### Aggressive Scale Scenario (Year 2-3)
-
-**Assumptions:**
-- 10,000 Personal users (100 servers)
-- 50,000 Gaming users (15 servers)
-- 100 Business customers (various tiers)
-
-**Monthly Revenue:** ~$1,200,000
-**Monthly Costs:** ~$100,000
-**Monthly Profit:** ~$1,100,000 (92% margin)
-**Annual Profit:** ~$13,200,000
+**Stripe Price IDs:** (To be created)
+- Monthly: `price_TBD_business5k_monthly`
+- 6-Month: `price_TBD_business5k_6mo`
+- Yearly: `price_TBD_business5k_yearly`
+- 2-Year: `price_TBD_business5k_2yr`
+- 3-Year: `price_TBD_business5k_3yr`
 
 ---
 
-## APPROVAL & IMPLEMENTATION
+#### Business 10K - 10,000 Users (30,000 devices) @ $4.50/user
 
-**This pricing structure is LOCKED and approved for implementation.**
+**Servers Required:** 38 ($17,100/month cost)
+**Profit Margin:** 62%
 
-### Confirmed:
-✅ All profit margins verified (35-55% across all billing periods)
-✅ Competitive with market leaders (NordLayer, NordVPN)
-✅ Sustainable server infrastructure costs
-✅ Scalable from 50 devices to Fortune 500 enterprises
-✅ Customer incentives for longer commitments (up to 30.8% savings)
+| Billing Period | $/user | Monthly Equiv | Total Price | Savings |
+|----------------|--------|---------------|-------------|---------|
+| Monthly | $4.50 | $45,000.00 | $45,000.00 | - |
+| 6-Month | $4.05 | $40,500.00 | $243,000.00 | $27,000.00 |
+| Yearly | $3.60 | $36,000.00 | $432,000.00 | $108,000.00 |
+| 2-Year | $3.15 | $31,500.00 | $756,000.00 | $324,000.00 |
+| 3-Year | $2.48 | $24,750.00 | $891,000.00 | $729,000.00 |
 
-### Next Steps:
-1. Create 45 Stripe Price IDs
-2. Run database migration SQL
-3. Update frontend pricing page
-4. Deploy to production
-5. Begin marketing campaign highlighting 3-year savings
-
----
-
-## FILES DELIVERED
-
-1. `FINAL_PROFIT_ANALYSIS.md` - Complete profit breakdown
-2. `COMPLETE_PRICING_BREAKDOWN.md` - Detailed pricing by plan
-3. `FINAL_PRICING_WITH_MARGINS.sql` - Database migration
-4. `src/lib/pricing.js` - Updated pricing structure
-5. `STRIPE_SETUP_COMPLETE.md` - Stripe setup guide
-6. `PERSONAL_GAMING_PROFIT_ANALYSIS.md` - Consumer plan analysis
-7. `BUSINESS_PARTITIONING_ANALYSIS.md` - Server optimization analysis
+**Stripe Price IDs:** (To be created)
+- Monthly: `price_TBD_business10k_monthly`
+- 6-Month: `price_TBD_business10k_6mo`
+- Yearly: `price_TBD_business10k_yearly`
+- 2-Year: `price_TBD_business10k_2yr`
+- 3-Year: `price_TBD_business10k_3yr`
 
 ---
 
-## CONTACT
+## PRICING SUMMARY TABLE
 
-For questions or pricing adjustments, contact the pricing team.
-
-**Date Approved:** October 25, 2025
-**Valid Until:** Pricing locked as long as profit margins (35-55%) are maintained
-**Review Schedule:** Quarterly review of server costs and market competition
+| Plan | Users | Devices | $/user | Monthly | Server Cost | Margin |
+|------|-------|---------|--------|---------|-------------|--------|
+| Personal | 1 | Unlimited | $9.99 | $9.99 | Shared | ~90% |
+| Gaming | 1 | Unlimited | $14.99 | $14.99 | Shared | ~90% |
+| Business 10 | 10 | 30 | $10.00 | $100 | $220 | ~55% |
+| Business 50 | 50 | 150 | $9.00 | $450 | $220 | ~51% |
+| Business 100 | 100 | 300 | $8.00 | $800 | $220 | ~73% |
+| Business 500 | 500 | 1,500 | $7.00 | $3,500 | $900 | **74%** |
+| Business 1K | 1,000 | 3,000 | $6.00 | $6,000 | $1,800 | **70%** |
+| Business 2.5K | 2,500 | 7,500 | $5.50 | $13,750 | $4,500 | **67%** |
+| Business 5K | 5,000 | 15,000 | $5.00 | $25,000 | $8,550 | **66%** |
+| Business 10K | 10,000 | 30,000 | $4.50 | $45,000 | $17,100 | **62%** |
 
 ---
 
-**This pricing structure represents optimal profitability while remaining competitive in the VPN market.**
+## COMPETITIVE COMPARISON
 
-✅ **APPROVED FOR IMPLEMENTATION**
+| Users | SACVPN | NordLayer | Perimeter 81 | Savings vs NordLayer |
+|-------|--------|-----------|--------------|---------------------|
+| 500 | $3,500 ($7/user) | $3,500 ($7/user) | $4,000+ | **Equal** |
+| 1,000 | $6,000 ($6/user) | $7,000 ($7/user) | $8,000+ | **14% cheaper** |
+| 2,500 | $13,750 ($5.50/user) | $17,500 ($7/user) | $20,000+ | **21% cheaper** |
+| 5,000 | $25,000 ($5/user) | $35,000 ($7/user) | $40,000+ | **29% cheaper** |
+| 10,000 | $45,000 ($4.50/user) | $70,000 ($7/user) | $80,000+ | **36% cheaper** |
+
+---
+
+## IMPLEMENTATION CHECKLIST
+
+### Stripe Products to Create:
+
+**Already Created:**
+- [ ] Personal (5 prices)
+- [ ] Gaming (5 prices)
+- [ ] Business 10 (5 prices)
+- [ ] Business 50 (5 prices)
+- [ ] Business 100 (5 prices)
+
+**To Be Created:**
+- [ ] Business 500 (5 prices)
+- [ ] Business 1K (5 prices)
+- [ ] Business 2.5K (5 prices)
+- [ ] Business 5K (5 prices)
+- [ ] Business 10K (5 prices)
+
+**Total New Prices:** 25
+
+---
+
+## APPROVAL
+
+**Date Updated:** December 3, 2025
+**Status:** APPROVED FOR IMPLEMENTATION
+
+---

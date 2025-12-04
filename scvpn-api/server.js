@@ -23,7 +23,7 @@ const {
   STRIPE_PRICE_GAMING,
   STRIPE_PRICE_BUSINESS10,
   STRIPE_PRICE_BUSINESS50,
-  STRIPE_PRICE_BUSINESS250,
+  STRIPE_PRICE_BUSINESS100,
 
   // Supabase (optional here)
   SCVPN_SUPABASE_URL,
@@ -40,7 +40,7 @@ const PRICE_MAP = {
   gaming: STRIPE_PRICE_GAMING,
   business10: STRIPE_PRICE_BUSINESS10,
   business50: STRIPE_PRICE_BUSINESS50,
-  business250: STRIPE_PRICE_BUSINESS250,
+  business100: STRIPE_PRICE_BUSINESS100,
 };
 const mask = (v) => (typeof v === "string" ? v.replace(/^(.{6}).+(.{4})$/, "$1…$2") : v);
 
@@ -168,7 +168,7 @@ async function init() {
         gaming: mask(STRIPE_PRICE_GAMING || null),
         business10: mask(STRIPE_PRICE_BUSINESS10 || null),
         business50: mask(STRIPE_PRICE_BUSINESS50 || null),
-        business250: mask(STRIPE_PRICE_BUSINESS250 || null),
+        business100: mask(STRIPE_PRICE_BUSINESS100 || null),
       },
     };
   });
@@ -214,7 +214,7 @@ async function init() {
         gaming: "Gaming",
         business10: "Business 10",
         business50: "Business 50",
-        business250: "Business 250",
+        business100: "Business 100",
       };
       const plan_label = PLAN_LABELS[plan_code] || plan_code;
 

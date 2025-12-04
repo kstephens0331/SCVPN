@@ -25,7 +25,7 @@ export default function PostCheckout() {
     plan === "gaming"      ? PLANS.gaming.name :
     plan === "business10"  ? PLANS.business10.name :
     plan === "business50"  ? PLANS.business50.name :
-    plan === "business250" ? PLANS.business250.name :
+    plan === "business100" ? PLANS.business100.name :
     "unknown";
 
   useEffect(() => {

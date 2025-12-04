@@ -65,7 +65,7 @@ function handlePlanClick(e, plan, setBusy) {
 }
 
 const personalCards = [PLANS.personal, PLANS.gaming];
-const businessCards = [PLANS.business10, PLANS.business50, PLANS.business250];
+const businessCards = [PLANS.business10, PLANS.business50, PLANS.business100];
 
 export default function Pricing() {
   return (
