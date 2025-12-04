@@ -8,6 +8,7 @@ import {
   PLAN_PRICING,
   getPersonalPlans,
   getBusinessPlans,
+  getEnterprisePlans,
   formatPrice,
   formatSavings,
 } from "../lib/pricing-new.js";
@@ -57,6 +58,7 @@ async function startCheckout(planCode, billingPeriod, setBusy) {
 export default function PricingFinal() {
   const personalPlans = getPersonalPlans();
   const businessPlans = getBusinessPlans();
+  const enterprisePlans = getEnterprisePlans();
 
   return (
     <>
@@ -80,7 +82,7 @@ export default function PricingFinal() {
           </p>
 
           {/* Quick jump links */}
-          <div className="flex justify-center mt-8 gap-4">
+          <div className="flex justify-center mt-8 gap-4 flex-wrap">
             <a
               href="#personal"
               className="px-4 py-2 rounded-full bg-primary text-white hover:bg-primary/90 transition"
@@ -92,6 +94,12 @@ export default function PricingFinal() {
               className="px-4 py-2 rounded-full bg-gray-200 text-dark hover:bg-gray-300 transition"
             >
               Business
+            </a>
+            <a
+              href="#enterprise"
+              className="px-4 py-2 rounded-full bg-gray-200 text-dark hover:bg-gray-300 transition"
+            >
+              Enterprise
             </a>
           </div>
 
@@ -119,8 +127,21 @@ export default function PricingFinal() {
                 <TransparentPlanCard key={plan.code} plan={plan} />
               ))}
             </div>
+          </div>
+
+          {/* Enterprise */}
+          <div id="enterprise" className="mt-20">
+            <h2 className="text-3xl font-semibold">Enterprise</h2>
+            <p className="text-gray-700 mt-2">
+              Volume pricing for large organizations. Each user gets 3 devices. Enterprise-grade 5 Gbps servers.
+            </p>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mt-8">
+              {enterprisePlans.map((plan) => (
+                <TransparentPlanCard key={plan.code} plan={plan} isEnterprise />
+              ))}
+            </div>
             <p className="text-sm text-gray-600 mt-6">
-              Need more than 250 devices?{" "}
+              Need more than 10,000 users?{" "}
               <Link to="/contact" className="text-primary underline">
                 Contact us
               </Link>{" "}
@@ -156,13 +177,24 @@ export default function PricingFinal() {
 /**
  * Transparent Plan Card - Shows all billing periods within the card
  */
-function TransparentPlanCard({ plan }) {
+function TransparentPlanCard({ plan, isEnterprise = false }) {
   const [selectedPeriod, setSelectedPeriod] = useState('twoyear'); // Default to 2-year
   const [busy, setBusy] = useState(false);
 
   const periods = Object.values(BILLING_PERIODS);
   const selectedPricing = plan.pricing[selectedPeriod];
   const selectedPeriodInfo = BILLING_PERIODS[selectedPeriod];
+
+  // Get capacity text based on plan type
+  const getCapacityText = () => {
+    if (isEnterprise && plan.users) {
+      return `${plan.users.toLocaleString()} users (${plan.devices.toLocaleString()} devices)`;
+    }
+    if (String(plan.devices).includes("Unlimited")) {
+      return "Unlimited devices";
+    }
+    return `${plan.devices} devices`;
+  };
 
   return (
     <div className="card p-6 flex flex-col hover:shadow-xl transition-shadow relative bg-white">
@@ -176,11 +208,12 @@ function TransparentPlanCard({ plan }) {
       {/* Plan Header */}
       <div className="text-center mb-4">
         <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
-        <p className="mt-1 text-gray-600 text-sm">
-          {String(plan.devices).includes("Unlimited")
-            ? "Unlimited devices"
-            : `${plan.devices} devices`}
+        <p className="mt-1 text-gray-600 text-sm">{getCapacityText()}</p>
+        {isEnterprise && selectedPricing.pricePerUser && (
+          <p className="text-sm text-green-600 font-semibold mt-1">
+            ${selectedPricing.pricePerUser}/user/month
           </p>
+        )}
       </div>
 
       {/* Transparent Pricing Table */}

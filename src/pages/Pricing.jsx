@@ -66,6 +66,13 @@ function handlePlanClick(e, plan, setBusy) {
 
 const personalCards = [PLANS.personal, PLANS.gaming];
 const businessCards = [PLANS.business10, PLANS.business50, PLANS.business100];
+const enterpriseCards = [
+  PLANS.business500,
+  PLANS.business1k,
+  PLANS.business2500,
+  PLANS.business5k,
+  PLANS.business10k,
+];
 
 export default function Pricing() {
   return (
@@ -79,12 +86,15 @@ export default function Pricing() {
         </div>
 
         {/* Quick jump links */}
-        <div className="flex justify-center mt-10 gap-4">
+        <div className="flex justify-center mt-10 gap-4 flex-wrap">
           <a href="#personal" className="px-4 py-2 rounded-full bg-primary text-white hover:bg-primary/90">
             Personal & Gaming
           </a>
           <a href="#business" className="px-4 py-2 rounded-full bg-gray-200 text-dark hover:bg-gray-300">
             Business
+          </a>
+          <a href="#enterprise" className="px-4 py-2 rounded-full bg-gray-200 text-dark hover:bg-gray-300">
+            Enterprise
           </a>
         </div>
 
@@ -112,9 +122,19 @@ export default function Pricing() {
               <PlanCard key={p.code} plan={p} />
             ))}
           </div>
-          <p className="text-sm text-gray-600 mt-6">
-            Business 250+ covers 250 devices; contact us for higher limits.
+        </div>
+
+        {/* Enterprise */}
+        <div id="enterprise" className="mt-16">
+          <h2 className="text-2xl font-semibold">Enterprise</h2>
+          <p className="text-gray-700 mt-1">
+            Volume pricing for large organizations. Each user gets 3 devices. Enterprise-grade 5 Gbps servers.
           </p>
+          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6 mt-6">
+            {(enterpriseCards ?? []).map((p) => (
+              <PlanCard key={p.code} plan={p} isEnterprise />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -123,8 +143,25 @@ export default function Pricing() {
   );
 }
 
-function PlanCard({ plan }) {
+function PlanCard({ plan, isEnterprise = false }) {
   const [busy, setBusy] = useState(false);
+
+  // Format price display
+  const price = plan.monthlyPrice || plan.price || 0;
+  const formattedPrice = typeof price === 'number'
+    ? price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    : price;
+
+  // Get device/user info
+  const getCapacityText = () => {
+    if (isEnterprise && plan.users) {
+      return `${plan.users.toLocaleString()} users (${plan.devices.toLocaleString()} devices)`;
+    }
+    if (String(plan.devices).includes("Unlimited")) {
+      return "Unlimited devices";
+    }
+    return `${plan.devices} devices`;
+  };
 
   return (
     <div className="card p-6 flex flex-col">
@@ -134,14 +171,17 @@ function PlanCard({ plan }) {
         </span>
       )}
       <h3 className="text-xl font-semibold">{plan.name}</h3>
-      <p className="mt-1 text-gray-600">
-        {String(plan.devices).includes("Unlimited") ? "Unlimited devices" : `${plan.devices} devices`}
-      </p>
+      <p className="mt-1 text-gray-600">{getCapacityText()}</p>
       <div className="mt-4">
-        <span className="text-4xl font-bold">${plan.price}</span>
+        <span className="text-4xl font-bold">${formattedPrice}</span>
         <span className="text-gray-600">/mo</span>
       </div>
-      <ul className="mt-4 text-gray-700 space-y-2">
+      {isEnterprise && plan.pricePerUser && (
+        <p className="text-sm text-green-600 font-medium mt-1">
+          ${plan.pricePerUser}/user/month
+        </p>
+      )}
+      <ul className="mt-4 text-gray-700 space-y-2 flex-grow">
         {(plan.features ?? []).map((f, i) => (
           <CheckItem key={i}>{f}</CheckItem>
         ))}
