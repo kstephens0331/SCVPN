@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Shield, Zap, Lock, ChevronRight, Mail, Phone, MapPin, Gift, Clock } from "lucide-react";
+import { Menu, X, Shield, Zap, Lock, ChevronRight, Mail, Phone, MapPin, Gift, Clock, Download } from "lucide-react";
 
 export default function Layout() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -23,6 +23,7 @@ export default function Layout() {
   }, [location]);
 
   const navLinks = [
+    { to: "/download", label: "Download" },
     { to: "/pricing", label: "Pricing" },
     { to: "/blog", label: "Blog" },
     { to: "/faq", label: "FAQ" },
@@ -85,11 +86,11 @@ export default function Layout() {
                 Sign In
               </Link>
               <Link
-                to="/pricing"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/30 transform hover:-translate-y-0.5 transition-all duration-300"
+                to="/download"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30 transform hover:-translate-y-0.5 transition-all duration-300"
               >
-                Start Free Trial
-                <ChevronRight className="w-4 h-4" />
+                <Download className="w-4 h-4" />
+                Download
               </Link>
             </div>
 

@@ -35,6 +35,7 @@ import PostCheckout from "./pages/PostCheckout";
 import AuthCallback from "./pages/AuthCallback";
 import TermsOfService from "./pages/TermsOfService.jsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
+import Download from "./pages/Download.jsx";
 
 import useAuthRedirect from './utils/useAuthRedirect';
 import useAutoLogout from './utils/useAutoLogout';
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/blog/:slug" element={<BlogPost />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/download" element={<Download />} />
       </Route>
     <Route path="/app/personal/*" element={<RequireAuth><PersonalLayout/></RequireAuth>}>
   <Route path="overview" element={<PersonalOverview/>} />
