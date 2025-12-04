@@ -1,5 +1,6 @@
 ﻿[project]
 ref = "ltwuqjmncldopkutiyak"
+
 [functions.checkout]
 verify_jwt = false
 
@@ -7,5 +8,24 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.stripe-webhook]
+verify_jwt = false
+
+# VPN Desktop Client API Functions
+[functions.vpn-auth]
+verify_jwt = false
+
+[functions.vpn-servers]
+verify_jwt = false
+
+[functions.vpn-register-device]
+verify_jwt = false
+
+[functions.vpn-get-config]
+verify_jwt = false
+
+[functions.vpn-switch-server]
+verify_jwt = false
+
+[functions.vpn-telemetry]
 verify_jwt = false
 
