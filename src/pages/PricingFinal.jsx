@@ -135,9 +135,11 @@ export default function PricingFinal() {
             <p className="text-gray-700 mt-2">
               Volume pricing for large organizations. Each user gets 3 devices. Enterprise-grade 5 Gbps servers.
             </p>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 max-w-6xl mx-auto">
+            <div className="flex flex-wrap justify-center gap-6 mt-8 max-w-6xl mx-auto">
               {enterprisePlans.map((plan) => (
-                <CompactPlanCard key={plan.code} plan={plan} isEnterprise />
+                <div key={plan.code} className="w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]">
+                  <CompactPlanCard plan={plan} isEnterprise />
+                </div>
               ))}
             </div>
             <p className="text-sm text-gray-600 mt-6">
