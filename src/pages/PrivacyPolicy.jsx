@@ -1,8 +1,17 @@
+import { Helmet } from "react-helmet-async";
+
 export default function PrivacyPolicy() {
   return (
+    <>
+      <Helmet>
+        <title>Privacy Policy - SACVPN No-Logs VPN Service</title>
+        <meta name="description" content="Read SACVPN's Privacy Policy. Learn about our strict no-logs policy, data collection practices, GDPR/CCPA compliance, and commitment to protecting your online privacy." />
+        <meta name="keywords" content="SACVPN privacy, VPN privacy policy, no-logs VPN, VPN data protection, GDPR VPN, CCPA VPN" />
+        <link rel="canonical" href="https://www.sacvpn.com/privacy" />
+      </Helmet>
     <div className="max-w-4xl mx-auto py-12 px-6">
       <h1 className="text-4xl font-bold mb-6">Privacy Policy</h1>
-      <p className="text-sm text-gray-600 mb-8">Last Updated: October 27, 2025</p>
+      <p className="text-sm text-gray-600 mb-8">Last Updated: December 2025</p>
 
       <div className="prose prose-lg max-w-none space-y-8">
 
@@ -371,5 +380,6 @@ export default function PrivacyPolicy() {
 
       </div>
     </div>
+    </>
   );
 }

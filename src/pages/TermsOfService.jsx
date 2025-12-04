@@ -1,8 +1,17 @@
+import { Helmet } from "react-helmet-async";
+
 export default function TermsOfService() {
   return (
+    <>
+      <Helmet>
+        <title>Terms of Service - SACVPN VPN Service Agreement</title>
+        <meta name="description" content="Read SACVPN's Terms of Service. Learn about our VPN service agreement, acceptable use policy, 14-day free trial, 30-day money-back guarantee, and subscription terms." />
+        <meta name="keywords" content="SACVPN terms, VPN terms of service, VPN agreement, VPN policy, VPN subscription terms" />
+        <link rel="canonical" href="https://www.sacvpn.com/terms" />
+      </Helmet>
     <div className="max-w-4xl mx-auto py-12 px-6">
       <h1 className="text-4xl font-bold mb-6">Terms of Service</h1>
-      <p className="text-sm text-gray-600 mb-8">Last Updated: October 27, 2025</p>
+      <p className="text-sm text-gray-600 mb-8">Last Updated: December 2025</p>
 
       <div className="prose prose-lg max-w-none space-y-8">
 
@@ -309,5 +318,6 @@ export default function TermsOfService() {
 
       </div>
     </div>
+    </>
   );
 }

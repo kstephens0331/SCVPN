@@ -1,5 +1,5 @@
 /**
- * Competitor data — prices and notable limitations are from public listings.
+ * Competitor data ï¿½ prices and notable limitations are from public listings.
  * Update values easily here; UI reads directly from this file.
  */
 export const COMPETITORS = [
@@ -14,9 +14,9 @@ export const COMPETITORS = [
 export const SACVPN_ADVANTAGES = {
   name: "SACVPN",
   price: {
-    personal: "$7.99/mo (Unlimited devices)",
-    gaming: "$11.99/mo (Unlimited devices + gaming routes)",
-    business: "From $50/mo for 10 devices, up to 250+",
+    personal: "$9.99/mo (Unlimited devices)",
+    gaming: "$14.99/mo (Unlimited devices + gaming routes)",
+    business: "From $100/mo for 10 devices, up to 100",
   },
   logs: "Strict no-logs",
   gaming: "Dedicated gaming-optimized routes",

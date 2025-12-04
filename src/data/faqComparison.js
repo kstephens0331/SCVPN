@@ -40,7 +40,7 @@ export const FEATURES = [
   },
   {
     feature: "Transparent business pricing",
-    sacvpn: "✅ $50 (10), $200 (50), $850 (250+)",
+    sacvpn: "✅ $100 (10), $450 (50), $800 (100)",
     express: "Enterprise only",
     nord: "Enterprise only",
     surfshark: "Enterprise only",
@@ -69,8 +69,8 @@ export const FEATURES = [
     pia: "✅ No-logs",
   },
   {
-    feature: "Starting price under $8",
-    sacvpn: "✅ $7.99",
+    feature: "Starting price under $10",
+    sacvpn: "✅ $9.99",
     express: "❌ $12.95",
     nord: "❌ $12.99",
     surfshark: "❌ $12.95",

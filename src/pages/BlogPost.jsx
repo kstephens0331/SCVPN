@@ -2,10 +2,38 @@ import { useParams, Link, Navigate } from 'react-router-dom';
 import { blogPosts } from '../data/blogPosts';
 import { Calendar, Clock, Tag, ArrowLeft, Share2 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { lazy, Suspense } from 'react';
+
+// Dynamic content imports
+const contentComponents = {
+  'what-is-vpn-complete-guide': lazy(() => import('../data/blog-content/what-is-vpn-complete-guide.jsx')),
+  'wireguard-vs-openvpn-comparison': lazy(() => import('../data/blog-content/wireguard-vs-openvpn-comparison.jsx')),
+  'vpn-for-remote-work-security': lazy(() => import('../data/blog-content/vpn-for-remote-work-security.jsx')),
+  'protect-privacy-online-2025': lazy(() => import('../data/blog-content/protect-privacy-online-2025.jsx')),
+  'vpn-setup-guide-beginners': lazy(() => import('../data/blog-content/vpn-setup-guide-beginners.jsx')),
+  'business-vpn-benefits': lazy(() => import('../data/blog-content/business-vpn-benefits.jsx')),
+  'public-wifi-security-risks': lazy(() => import('../data/blog-content/public-wifi-security-risks.jsx')),
+  'vpn-gaming-benefits': lazy(() => import('../data/blog-content/vpn-gaming-benefits.jsx')),
+  'vpn-streaming-unblock-content': lazy(() => import('../data/blog-content/vpn-streaming-unblock-content.jsx')),
+  'vpn-router-setup-guide': lazy(() => import('../data/blog-content/vpn-router-setup-guide.jsx')),
+};
+
+function ContentLoader() {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+      <div className="h-4 bg-gray-700 rounded w-full"></div>
+      <div className="h-4 bg-gray-700 rounded w-5/6"></div>
+      <div className="h-4 bg-gray-700 rounded w-full"></div>
+      <div className="h-4 bg-gray-700 rounded w-2/3"></div>
+    </div>
+  );
+}
 
 export default function BlogPost() {
   const { slug } = useParams();
   const post = blogPosts.find(p => p.slug === slug);
+  const ContentComponent = contentComponents[slug];
 
   if (!post) {
     return <Navigate to="/blog" replace />;
@@ -114,16 +142,19 @@ export default function BlogPost() {
               <div className="text-9xl">🔒</div>
             </div>
 
-            {/* Article Content - Will be imported from individual blog content files */}
+            {/* Article Content - Dynamically loaded from blog content files */}
             <div className="prose prose-invert prose-lg max-w-none">
-              <div id="blog-content">
-                <p className="text-gray-300 text-lg leading-relaxed mb-6">
-                  This is a placeholder for the full blog post content. Each blog post will have its own dedicated content file with 3-4K words of SEO-optimized content.
-                </p>
-                <p className="text-gray-400 italic">
-                  Full blog post content will be added for: <strong className="text-white">{post.title}</strong>
-                </p>
-              </div>
+              {ContentComponent ? (
+                <Suspense fallback={<ContentLoader />}>
+                  <ContentComponent />
+                </Suspense>
+              ) : (
+                <div id="blog-content">
+                  <p className="text-gray-300 text-lg leading-relaxed mb-6">
+                    Content is being prepared for this article. Please check back soon!
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Call to Action */}
