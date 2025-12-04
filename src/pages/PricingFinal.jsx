@@ -135,11 +135,33 @@ export default function PricingFinal() {
             <p className="text-gray-700 mt-2">
               Volume pricing for large organizations. Each user gets 3 devices. Enterprise-grade 5 Gbps servers.
             </p>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mt-8">
-              {enterprisePlans.map((plan) => (
-                <TransparentPlanCard key={plan.code} plan={plan} isEnterprise />
-              ))}
+
+            {/* Enterprise Pricing Table */}
+            <div className="mt-8 max-w-5xl mx-auto">
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                {/* Table Header */}
+                <div className="bg-primary text-white px-6 py-4 grid grid-cols-5 gap-4 text-center font-semibold">
+                  <div>Plan</div>
+                  <div>Users</div>
+                  <div>Monthly</div>
+                  <div>Per User</div>
+                  <div></div>
+                </div>
+
+                {/* Table Rows */}
+                {enterprisePlans.map((plan, index) => (
+                  <EnterprisePlanRow key={plan.code} plan={plan} isEven={index % 2 === 0} />
+                ))}
+              </div>
+
+              {/* Volume Discount Note */}
+              <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                <p className="text-green-800 font-medium">
+                  💰 Save up to 45% with multi-year billing! Select a plan to see all options.
+                </p>
+              </div>
             </div>
+
             <p className="text-sm text-gray-600 mt-6">
               Need more than 10,000 users?{" "}
               <Link to="/contact" className="text-primary underline">
@@ -335,5 +357,151 @@ function TransparentPlanCard({ plan, isEnterprise = false }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+/**
+ * Enterprise Plan Row - Clean table row for enterprise plans
+ */
+function EnterprisePlanRow({ plan, isEven }) {
+  const [expanded, setExpanded] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('yearly');
+  const [busy, setBusy] = useState(false);
+
+  const monthlyPricing = plan.pricing.monthly;
+  const selectedPricing = plan.pricing[selectedPeriod];
+  const periods = Object.values(BILLING_PERIODS);
+
+  return (
+    <>
+      {/* Main Row */}
+      <div
+        className={`px-6 py-4 grid grid-cols-5 gap-4 items-center text-center cursor-pointer hover:bg-gray-50 transition ${
+          isEven ? 'bg-gray-50/50' : 'bg-white'
+        } ${expanded ? 'bg-primary/5' : ''}`}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="text-left">
+          <div className="font-semibold text-gray-900">{plan.name}</div>
+          {plan.badge && (
+            <span className="text-xs bg-secondary text-white px-2 py-0.5 rounded-full">
+              {plan.badge}
+            </span>
+          )}
+        </div>
+        <div>
+          <div className="font-medium text-gray-900">{plan.users.toLocaleString()}</div>
+          <div className="text-xs text-gray-500">{plan.devices.toLocaleString()} devices</div>
+        </div>
+        <div className="font-bold text-primary text-lg">
+          {formatPrice(monthlyPricing.monthlyPrice)}
+        </div>
+        <div className="text-green-600 font-semibold">
+          ${monthlyPricing.pricePerUser}/user
+        </div>
+        <div>
+          <button
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              expanded
+                ? 'bg-gray-200 text-gray-700'
+                : 'bg-primary text-white hover:bg-primary/90'
+            }`}
+          >
+            {expanded ? 'Close' : 'Select'}
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded Details */}
+      {expanded && (
+        <div className="px-6 py-6 bg-primary/5 border-t border-primary/10">
+          <div className="max-w-3xl mx-auto">
+            {/* Billing Period Selection */}
+            <div className="mb-6">
+              <div className="text-sm font-semibold text-gray-600 mb-3">Choose Billing Period:</div>
+              <div className="grid grid-cols-5 gap-2">
+                {periods.map((period) => {
+                  const pricing = plan.pricing[period.id];
+                  const isSelected = selectedPeriod === period.id;
+
+                  return (
+                    <button
+                      key={period.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPeriod(period.id);
+                      }}
+                      className={`p-3 rounded-lg text-center transition ${
+                        isSelected
+                          ? 'bg-primary text-white shadow-md'
+                          : 'bg-white border border-gray-200 hover:border-primary'
+                      }`}
+                    >
+                      <div className={`text-sm font-semibold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                        {period.name}
+                      </div>
+                      {period.discount > 0 && (
+                        <div className={`text-xs mt-1 ${isSelected ? 'text-green-200' : 'text-green-600'}`}>
+                          Save {period.discount}%
+                        </div>
+                      )}
+                      <div className={`text-xs mt-1 ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                        ${pricing.pricePerUser}/user
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selected Summary */}
+            <div className="bg-white rounded-lg p-4 mb-6 flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-600">You'll Pay</div>
+                <div className="text-2xl font-bold text-primary">
+                  {formatPrice(selectedPricing.monthlyPrice)}/month
+                </div>
+                {selectedPeriod !== 'monthly' && (
+                  <div className="text-sm text-gray-600">
+                    {formatPrice(selectedPricing.totalPrice)} billed {BILLING_PERIODS[selectedPeriod].interval}
+                  </div>
+                )}
+              </div>
+              {selectedPricing.savings > 0 && (
+                <div className="text-right">
+                  <div className="text-green-600 font-bold text-lg">
+                    Save {formatSavings(selectedPricing.savings)}
+                  </div>
+                  <div className="text-sm text-gray-500">vs monthly billing</div>
+                </div>
+              )}
+            </div>
+
+            {/* Features Grid */}
+            <div className="grid md:grid-cols-2 gap-2 mb-6">
+              {plan.features.map((feature, i) => (
+                <div key={i} className="flex items-center text-sm text-gray-700">
+                  <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
+                  <span>{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={(e) => {
+                e.stopPropagation();
+                startCheckout(plan.code, selectedPeriod, setBusy);
+              }}
+              className="button-primary w-full text-center disabled:opacity-60 py-3 font-semibold"
+            >
+              {busy ? "Redirecting…" : `Get ${plan.name} - ${formatPrice(selectedPricing.totalPrice)} billed ${BILLING_PERIODS[selectedPeriod].interval}`}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

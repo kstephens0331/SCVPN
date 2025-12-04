@@ -586,14 +586,14 @@ export function getPlanPricing(planCode, billingPeriod = 'monthly') {
  * Helper function to format savings
  */
 export function formatSavings(amount) {
-  return `Save $${amount.toFixed(2)}`;
+  return `Save $${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 /**
- * Helper function to format price
+ * Helper function to format price with commas
  */
 export function formatPrice(amount) {
-  return `$${amount.toFixed(2)}`;
+  return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 /**
