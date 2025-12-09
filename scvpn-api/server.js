@@ -456,6 +456,35 @@ async function init() {
 
       app.log.info({ userId, subId: subscription.id, plan: plan_code, subData }, "[claim] Subscription linked to user");
 
+      // Send welcome email with download link
+      try {
+        const planNames = {
+          personal: 'Personal',
+          gaming: 'Gaming',
+          business10: 'Business 10',
+          business50: 'Business 50',
+          business100: 'Business 100',
+          business500: 'Business 500',
+          business1k: 'Business 1K',
+          business2500: 'Business 2.5K',
+          business5k: 'Business 5K',
+          business10k: 'Business 10K',
+          enterprise: 'Enterprise Custom'
+        };
+        const planName = planNames[plan_code] || plan_code || 'VPN';
+
+        await emailService.sendWelcomeEmail({
+          userEmail: email,
+          userName: email.split('@')[0], // Use email prefix as name
+          planCode: plan_code,
+          planName: planName
+        });
+        app.log.info({ email, plan: plan_code }, "[claim] Welcome email sent");
+      } catch (emailErr) {
+        // Don't fail the claim if email fails
+        app.log.error({ emailErr }, "[claim] Failed to send welcome email");
+      }
+
       return reply.send({ ok: true, subscription_id: subscription.id });
     } catch (err) {
       app.log.error({ err }, "[claim] error");

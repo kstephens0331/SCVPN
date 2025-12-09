@@ -26,6 +26,9 @@ import {
   Clock,
   ArrowRight,
   Play,
+  X,
+  Bell,
+  Mail,
 } from "lucide-react";
 
 // Platform detection
@@ -44,9 +47,11 @@ const platforms = {
     name: "Windows",
     icon: Monitor,
     version: "1.0.0",
-    size: "45 MB",
+    size: "3 MB",
     requirements: "Windows 10/11 (64-bit)",
-    downloadUrl: "#",
+    downloadUrl: "https://github.com/kstephens0331/sacvpn-desktop/releases/latest/download/SACVPN_1.0.0_x64-setup.exe",
+    downloadUrlMsi: "https://github.com/kstephens0331/sacvpn-desktop/releases/latest/download/SACVPN_1.0.0_x64_en-US.msi",
+    fileName: "SACVPN_1.0.0_x64-setup.exe",
     featured: true,
   },
   macos: {
@@ -55,7 +60,8 @@ const platforms = {
     version: "1.0.0",
     size: "42 MB",
     requirements: "macOS 10.15+",
-    downloadUrl: "#",
+    downloadUrl: null, // Set to actual URL when builds are ready
+    fileName: "SACVPN-1.0.0.dmg",
     featured: true,
   },
   linux: {
@@ -64,7 +70,8 @@ const platforms = {
     version: "1.0.0",
     size: "38 MB",
     requirements: "Ubuntu 20.04+, Debian 11+, Fedora 35+",
-    downloadUrl: "#",
+    downloadUrl: null, // Set to actual URL when builds are ready
+    fileName: "sacvpn-1.0.0.deb",
     featured: false,
   },
   android: {
@@ -73,7 +80,8 @@ const platforms = {
     version: "1.0.0",
     size: "28 MB",
     requirements: "Android 8.0+",
-    downloadUrl: "#",
+    downloadUrl: null,
+    fileName: "SACVPN-1.0.0.apk",
     featured: false,
     comingSoon: true,
   },
@@ -83,7 +91,8 @@ const platforms = {
     version: "1.0.0",
     size: "32 MB",
     requirements: "iOS 14+",
-    downloadUrl: "#",
+    downloadUrl: null,
+    fileName: "App Store",
     featured: false,
     comingSoon: true,
   },
@@ -160,12 +169,32 @@ export default function Download() {
   const [selectedPlatform, setSelectedPlatform] = useState("windows");
   const [showAllPlatforms, setShowAllPlatforms] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadingPlatform, setDownloadingPlatform] = useState(null);
 
   useEffect(() => {
     const platform = detectPlatform();
     setDetectedPlatform(platform);
     setSelectedPlatform(platform);
   }, []);
+
+  // Handle download click
+  const handleDownload = (platformKey) => {
+    const platform = platforms[platformKey];
+
+    if (platform.comingSoon) {
+      return; // Already handled by "Coming Soon" button
+    }
+
+    if (platform.downloadUrl) {
+      // If we have a real download URL, trigger the download
+      window.open(platform.downloadUrl, '_blank');
+    } else {
+      // Show modal that download is being prepared
+      setDownloadingPlatform(platformKey);
+      setShowDownloadModal(true);
+    }
+  };
 
   const currentPlatform = platforms[selectedPlatform];
   const PlatformIcon = currentPlatform.icon;
@@ -311,6 +340,7 @@ export default function Download() {
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
+                          onClick={() => handleDownload(selectedPlatform)}
                           className="w-full py-5 rounded-2xl bg-gradient-to-r from-brand-500 via-accent-cyan to-brand-500 bg-[length:200%_100%] hover:bg-right text-white font-bold text-lg shadow-2xl shadow-brand-500/30 transition-all duration-500 flex items-center justify-center gap-3"
                         >
                           <DownloadIcon className="w-6 h-6" />
@@ -320,6 +350,22 @@ export default function Download() {
                         <p className="text-center text-gray-500 text-sm mt-3">
                           Free 14-day trial • No credit card required
                         </p>
+                        {/* Enterprise MSI option for Windows */}
+                        {selectedPlatform === "windows" && currentPlatform.downloadUrlMsi && (
+                          <div className="mt-4 pt-4 border-t border-white/10">
+                            <p className="text-center text-gray-400 text-sm mb-2">
+                              <strong>Enterprise deployment?</strong>
+                            </p>
+                            <a
+                              href={currentPlatform.downloadUrlMsi}
+                              className="flex items-center justify-center gap-2 text-brand-400 hover:text-brand-300 text-sm transition-colors"
+                            >
+                              <HardDrive className="w-4 h-4" />
+                              Download MSI for Group Policy / SCCM
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -613,6 +659,7 @@ export default function Download() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => handleDownload(selectedPlatform)}
                   className="px-8 py-4 rounded-xl bg-gradient-to-r from-brand-500 to-accent-cyan text-white font-bold text-lg shadow-2xl shadow-brand-500/30 flex items-center justify-center gap-2"
                 >
                   <DownloadIcon className="w-5 h-5" />
@@ -633,6 +680,113 @@ export default function Download() {
           </div>
         </section>
       </div>
+
+      {/* Download Coming Soon Modal */}
+      <AnimatePresence>
+        {showDownloadModal && downloadingPlatform && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowDownloadModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-gray-900 rounded-3xl border border-white/10 overflow-hidden"
+            >
+              {/* Glow Effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-brand-500 via-accent-cyan to-accent-purple rounded-3xl blur-xl opacity-20" />
+
+              <div className="relative">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-white/10">
+                  <h3 className="text-xl font-bold text-white">Download Coming Soon</h3>
+                  <button
+                    onClick={() => setShowDownloadModal(false)}
+                    className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-accent-cyan flex items-center justify-center">
+                      {(() => {
+                        const PlatformModalIcon = platforms[downloadingPlatform].icon;
+                        return <PlatformModalIcon className="w-8 h-8 text-white" />;
+                      })()}
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-white">
+                        SACVPN for {platforms[downloadingPlatform].name}
+                      </h4>
+                      <p className="text-gray-400 text-sm">
+                        Version {platforms[downloadingPlatform].version} • {platforms[downloadingPlatform].size}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-brand-500/10 border border-brand-500/20 rounded-xl p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                      <Bell className="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-white font-medium mb-1">
+                          We're putting the finishing touches on the {platforms[downloadingPlatform].name} app!
+                        </p>
+                        <p className="text-gray-400 text-sm">
+                          Our desktop clients are in final testing. Leave your email to be notified when the download is available.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Email Signup */}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const email = e.target.email.value;
+                      // TODO: Hook up to actual email list
+                      console.log('Notify email:', email, 'Platform:', downloadingPlatform);
+                      setShowDownloadModal(false);
+                      alert(`We'll notify you at ${email} when SACVPN for ${platforms[downloadingPlatform].name} is ready!`);
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="Enter your email"
+                        required
+                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                      />
+                    </div>
+                    <motion.button
+                      type="submit"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-500 to-accent-cyan text-white font-semibold shadow-lg shadow-brand-500/30 transition-all"
+                    >
+                      Notify Me When Available
+                    </motion.button>
+                  </form>
+
+                  <p className="text-center text-gray-500 text-xs mt-4">
+                    No spam. We'll only email you when the download is ready.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

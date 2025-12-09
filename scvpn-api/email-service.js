@@ -92,6 +92,200 @@ export class EmailService {
     return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
   }
 
+  // Download URLs for desktop app
+  getDownloadUrls() {
+    return {
+      msi: 'https://github.com/kstephens0331/sacvpn-desktop/releases/latest/download/SACVPN_1.0.0_x64_en-US.msi',
+      exe: 'https://github.com/kstephens0331/sacvpn-desktop/releases/latest/download/SACVPN_1.0.0_x64-setup.exe',
+    };
+  }
+
+  // Determine if plan is a business plan
+  isBusinessPlan(planCode) {
+    return planCode && planCode.startsWith('business');
+  }
+
+  // Send welcome email after subscription with download link
+  async sendWelcomeEmail({ userEmail, userName, planCode, planName }) {
+    if (!this.sendGridConfigured) {
+      this.logger.warn('Email service not configured - skipping welcome email');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    try {
+      const isBusiness = this.isBusinessPlan(planCode);
+      const downloadUrls = this.getDownloadUrls();
+      const downloadUrl = isBusiness ? downloadUrls.msi : downloadUrls.exe;
+      const installerType = isBusiness ? 'MSI (Enterprise Installer)' : 'Windows Setup';
+
+      const emailHtml = this.getWelcomeEmail(userName, planName, downloadUrl, installerType, isBusiness);
+
+      const msg = {
+        to: userEmail,
+        from: this.fromEmail,
+        subject: `Welcome to SACVPN! 🎉 Your ${planName} subscription is active`,
+        html: emailHtml,
+      };
+
+      const response = await sgMail.send(msg);
+
+      this.logger.info({
+        messageId: response[0].headers['x-message-id'],
+        to: userEmail,
+        plan: planCode
+      }, 'Welcome email sent');
+
+      return { success: true, messageId: response[0].headers['x-message-id'] };
+
+    } catch (error) {
+      this.logger.error({
+        error: error.message,
+        code: error.code,
+        response: error.response?.body
+      }, 'Welcome email sending failed');
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Welcome email template
+  getWelcomeEmail(userName, planName, downloadUrl, installerType, isBusiness) {
+    const downloadUrls = this.getDownloadUrls();
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to SACVPN!</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 12px; margin-bottom: 30px; }
+    .logo { font-size: 36px; font-weight: bold; margin: 0; }
+    .subtitle { font-size: 20px; margin: 15px 0 0 0; opacity: 0.95; }
+    .content { background: #f9fafb; padding: 30px; border-radius: 12px; margin-bottom: 20px; }
+    .download-box { background: white; padding: 30px; border-radius: 12px; text-align: center; margin: 25px 0; border: 2px solid #10b981; }
+    .download-btn { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 18px; margin: 15px 0; }
+    .download-btn:hover { opacity: 0.9; }
+    .step { background: white; padding: 20px; margin: 15px 0; border-left: 4px solid #10b981; border-radius: 4px; }
+    .step-number { display: inline-block; background: #10b981; color: white; width: 30px; height: 30px; line-height: 30px; text-align: center; border-radius: 50%; margin-right: 10px; font-weight: bold; }
+    .features { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .feature-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+    .feature-item:last-child { border-bottom: none; }
+    .check { color: #10b981; font-size: 20px; margin-right: 12px; }
+    .footer { text-align: center; color: #666; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }
+    .alt-download { background: #f3f4f6; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 14px; }
+    .badge { display: inline-block; background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 class="logo">🔒 SACVPN</h1>
+    <p class="subtitle">Welcome to Premium VPN Protection!</p>
+  </div>
+
+  <div class="content">
+    <h2>Hi ${userName || 'there'}! 👋</h2>
+    <p>Thank you for subscribing to <strong>${planName}</strong>! Your account is now active and ready to protect your online privacy.</p>
+
+    <div class="download-box">
+      <span class="badge">${isBusiness ? 'ENTERPRISE' : 'RECOMMENDED'}</span>
+      <h3 style="margin: 10px 0;">Download SACVPN Desktop</h3>
+      <p style="color: #666; margin-bottom: 20px;">One-click connection • WireGuard powered • No configuration needed</p>
+      <a href="${downloadUrl}" class="download-btn">
+        ⬇️ Download for Windows
+      </a>
+      <p style="font-size: 14px; color: #888; margin-top: 15px;">${installerType} • Windows 10/11 (64-bit)</p>
+    </div>
+
+    <h3>🚀 Get Started in 3 Easy Steps</h3>
+
+    <div class="step">
+      <span class="step-number">1</span>
+      <strong>Download & Install</strong>
+      <p>Click the download button above and run the installer. Installation takes less than a minute.</p>
+    </div>
+
+    <div class="step">
+      <span class="step-number">2</span>
+      <strong>Sign In</strong>
+      <p>Open SACVPN and sign in with your account email: <strong>${userName || 'your email'}</strong></p>
+    </div>
+
+    <div class="step">
+      <span class="step-number">3</span>
+      <strong>Connect</strong>
+      <p>Click the big green button to connect. That's it! 🎉 Your traffic is now encrypted and secure.</p>
+    </div>
+
+    <div class="features">
+      <h3 style="margin-top: 0;">✨ What's Included in Your Plan</h3>
+      <div class="feature-item">
+        <span class="check">✓</span>
+        <span>Unlimited bandwidth - stream and download without limits</span>
+      </div>
+      <div class="feature-item">
+        <span class="check">✓</span>
+        <span>WireGuard protocol - fastest VPN technology available</span>
+      </div>
+      <div class="feature-item">
+        <span class="check">✓</span>
+        <span>Global server network - connect from anywhere</span>
+      </div>
+      <div class="feature-item">
+        <span class="check">✓</span>
+        <span>Kill switch protection - never leak your real IP</span>
+      </div>
+      <div class="feature-item">
+        <span class="check">✓</span>
+        <span>Auto-connect on startup - always protected</span>
+      </div>
+      ${isBusiness ? `
+      <div class="feature-item">
+        <span class="check">✓</span>
+        <span>Device management dashboard - manage your team's devices</span>
+      </div>
+      <div class="feature-item">
+        <span class="check">✓</span>
+        <span>Priority support - dedicated assistance for your business</span>
+      </div>
+      ` : ''}
+    </div>
+
+    ${isBusiness ? `
+    <div class="alt-download">
+      <strong>📦 Deployment Options</strong>
+      <p style="margin: 10px 0 0 0;">
+        <strong>MSI Installer (Enterprise):</strong> <a href="${downloadUrls.msi}">Download MSI</a> - For Group Policy deployment<br>
+        <strong>EXE Installer (Standard):</strong> <a href="${downloadUrls.exe}">Download EXE</a> - For individual installs
+      </p>
+    </div>
+    ` : `
+    <div class="alt-download">
+      <strong>💼 Need to deploy to multiple computers?</strong>
+      <p style="margin: 10px 0 0 0;">
+        Download our <a href="${downloadUrls.msi}">MSI installer</a> for enterprise deployment via Group Policy or SCCM.
+      </p>
+    </div>
+    `}
+
+    <h3>📱 Mobile & Other Devices</h3>
+    <p>Want to protect your phone or other devices too? Log in to your <a href="https://www.sacvpn.com/dashboard">SACVPN Dashboard</a> to set up additional devices with easy QR code scanning.</p>
+  </div>
+
+  <div class="footer">
+    <p><strong>Need help?</strong> Reply to this email or visit our <a href="https://www.sacvpn.com/support">Support Center</a></p>
+    <p>🔒 Stay secure with SACVPN</p>
+    <p style="font-size: 12px; color: #999;">
+      You received this email because you subscribed to SACVPN ${planName}.<br>
+      © ${new Date().getFullYear()} Stephen's Code. All rights reserved.
+    </p>
+  </div>
+</body>
+</html>
+    `.trim();
+  }
+
   // Desktop setup email template
   getDesktopSetupEmail(userName, deviceName, wgConfig) {
     return `
