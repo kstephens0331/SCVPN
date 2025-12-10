@@ -94,10 +94,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insert telemetry record
+    // Upsert telemetry record (device_telemetry has PRIMARY KEY on device_id)
     const { error: telemetryError } = await supabase
       .from("device_telemetry")
-      .insert({
+      .upsert({
         device_id,
         node_id: config.node_id,
         is_connected,
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
         bytes_received: bytes_received || 0,
         last_handshake: last_handshake ? new Date(last_handshake).toISOString() : null,
         recorded_at: new Date().toISOString()
-      });
+      }, { onConflict: 'device_id' });
 
     if (telemetryError) {
       console.error("Telemetry insert error:", telemetryError);
