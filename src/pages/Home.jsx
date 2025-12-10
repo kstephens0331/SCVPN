@@ -43,20 +43,20 @@ export default function Home() {
   return (
     <>
       <Helmet>
-        <title>SACVPN - Secure VPN Service with WireGuard | Fast, Private & Reliable</title>
+        <title>SACVPN - Business VPN Solution | Secure Remote Access for Teams & Enterprises</title>
         <meta
           name="description"
-          content="SACVPN offers secure VPN service powered by WireGuard protocol. Protect your online privacy, secure public WiFi connections, and enjoy fast speeds for streaming and gaming. No-logs policy guaranteed."
+          content="SACVPN provides enterprise VPN service powered by WireGuard. Secure remote access for businesses, HIPAA-compliant encryption, team management dashboard, and 14-day free trial. Trusted by healthcare, legal, and financial organizations."
         />
         <meta
           name="keywords"
-          content="VPN service, WireGuard VPN, secure VPN, private internet access, online privacy, VPN for gaming, VPN for streaming, business VPN, remote work VPN, encrypted connection"
+          content="business VPN solution, enterprise VPN service, secure remote access VPN, corporate VPN network, team VPN management, WireGuard business VPN, HIPAA compliant VPN, remote work security, small business VPN, VPN for companies"
         />
         <link rel="canonical" href="https://www.sacvpn.com/" />
-        <meta property="og:title" content="SACVPN - Secure VPN Service with WireGuard Technology" />
+        <meta property="og:title" content="SACVPN - Business VPN Solution for Secure Remote Access" />
         <meta
           property="og:description"
-          content="Protect your online privacy with SACVPN's WireGuard-powered VPN service. Fast speeds, unlimited devices, and enterprise-grade security."
+          content="Enterprise-grade VPN service for businesses. Secure remote access, team management, and compliance-ready encryption. Start your 14-day free trial."
         />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://www.sacvpn.com/" />

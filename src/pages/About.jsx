@@ -13,9 +13,9 @@ export default function About(){
   return (
     <>
       <Helmet>
-        <title>About SACVPN - WireGuard VPN Service for Privacy & Security</title>
-        <meta name="description" content="Learn about SACVPN's mission to provide secure, fast VPN service using WireGuard protocol. Discover our no-logs privacy policy, transparent pricing, and commitment to online security." />
-        <meta name="keywords" content="about SACVPN, VPN company, WireGuard VPN provider, online privacy, secure VPN service, no-logs VPN, VPN for business, VPN for gaming" />
+        <title>About SACVPN - Enterprise VPN Provider for Business Security</title>
+        <meta name="description" content="SACVPN provides enterprise VPN solutions for businesses of all sizes. U.S.-based company offering HIPAA-compliant security, dedicated support, and WireGuard technology for healthcare, legal, and financial organizations." />
+        <meta name="keywords" content="about SACVPN, enterprise VPN provider, business VPN company, corporate VPN solution, U.S. VPN provider, HIPAA compliant VPN company, managed VPN service" />
         <link rel="canonical" href="https://www.sacvpn.com/about" />
       </Helmet>
 

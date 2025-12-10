@@ -55,14 +55,14 @@ export default function Contact() {
   return (
     <>
       <Helmet>
-        <title>Contact SACVPN Support - Get Help 24/7 | SACVPN</title>
+        <title>Contact SACVPN - Business VPN Sales & Enterprise Support</title>
         <meta
           name="description"
-          content="Contact SACVPN support team for help with your VPN service. 24/7 email support, quick response times, and expert assistance for all your VPN questions."
+          content="Contact SACVPN for business VPN inquiries, enterprise sales, and dedicated support. Request a demo, get custom pricing for your organization, or speak with our security experts."
         />
         <meta
           name="keywords"
-          content="SACVPN support, VPN help, contact VPN, VPN customer service, VPN assistance, WireGuard support"
+          content="contact business VPN, enterprise VPN sales, VPN demo request, corporate VPN support, business VPN inquiry"
         />
         <link rel="canonical" href="https://www.sacvpn.com/contact" />
       </Helmet>

@@ -87,9 +87,9 @@ export default function PricingFinal() {
   return (
     <>
       <Helmet>
-        <title>VPN Pricing Plans - Affordable Secure VPN Service | SACVPN</title>
-        <meta name="description" content="SACVPN VPN pricing: Personal plan $7.99/mo, Gaming VPN $11.99/mo, Business VPN from $149/mo. Unlimited devices, WireGuard protocol, no-logs policy. Save up to 45% with annual plans." />
-        <meta name="keywords" content="VPN pricing, cheap VPN, affordable VPN, VPN plans, business VPN pricing, gaming VPN cost, VPN subscription, WireGuard VPN price" />
+        <title>Business VPN Pricing - Enterprise & Team Plans | SACVPN</title>
+        <meta name="description" content="SACVPN business VPN pricing: Team plans from $6/device/month. Enterprise VPN with centralized management, HIPAA compliance, and 14-day free trial. Personal and gaming plans also available." />
+        <meta name="keywords" content="business VPN pricing, enterprise VPN cost, team VPN plans, corporate VPN subscription, managed VPN service pricing, VPN for companies, small business VPN cost" />
         <link rel="canonical" href="https://www.sacvpn.com/pricing" />
       </Helmet>
 

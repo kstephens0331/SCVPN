@@ -214,14 +214,14 @@ export default function Download() {
   return (
     <>
       <Helmet>
-        <title>Download SACVPN - Fast, Secure VPN for Windows, Mac, Linux</title>
+        <title>Download Business VPN Client - Windows, Mac, Linux | SACVPN</title>
         <meta
           name="description"
-          content="Download SACVPN for Windows, macOS, and Linux. Get military-grade encryption, lightning-fast speeds with WireGuard, and a 14-day free trial. No credit card required."
+          content="Download SACVPN business VPN client for Windows, macOS, and Linux. Enterprise-grade WireGuard encryption, centralized team deployment, and 14-day free trial for businesses."
         />
         <meta
           name="keywords"
-          content="download VPN, SACVPN download, Windows VPN, Mac VPN, Linux VPN, WireGuard VPN client"
+          content="download business VPN, enterprise VPN client, corporate VPN download, Windows VPN client, Mac VPN client, team VPN deployment"
         />
         <link rel="canonical" href="https://www.sacvpn.com/download" />
       </Helmet>

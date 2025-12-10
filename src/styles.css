@@ -51,6 +51,28 @@
     background-image: var(--gradient-secondary);
   }
 
+  /* Industry-specific gradient text */
+  .text-gradient-emerald {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #10b981, #059669);
+  }
+  .text-gradient-slate {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #475569, #334155);
+  }
+  .text-gradient-blue {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #2563eb, #1d4ed8);
+  }
+  .text-gradient-purple {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #9333ea, #7c3aed);
+  }
+  .text-gradient-orange {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #f97316, #ea580c);
+  }
+
   /* Glass morphism utilities */
   .glass {
     @apply bg-white/10 backdrop-blur-xl border border-white/20;

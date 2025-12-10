@@ -37,6 +37,13 @@ import TermsOfService from "./pages/TermsOfService.jsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 import Download from "./pages/Download.jsx";
 
+// Industry Landing Pages
+import HealthcareVPN from "./pages/industries/HealthcareVPN.jsx";
+import LegalVPN from "./pages/industries/LegalVPN.jsx";
+import FinanceVPN from "./pages/industries/FinanceVPN.jsx";
+import RemoteTeamsVPN from "./pages/industries/RemoteTeamsVPN.jsx";
+import SmallBusinessVPN from "./pages/industries/SmallBusinessVPN.jsx";
+
 import useAuthRedirect from './utils/useAuthRedirect';
 import useAutoLogout from './utils/useAutoLogout';
 
@@ -61,6 +68,12 @@ export default function App() {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/download" element={<Download />} />
+        {/* Industry Landing Pages */}
+        <Route path="/industries/healthcare" element={<HealthcareVPN />} />
+        <Route path="/industries/legal" element={<LegalVPN />} />
+        <Route path="/industries/finance" element={<FinanceVPN />} />
+        <Route path="/industries/remote-teams" element={<RemoteTeamsVPN />} />
+        <Route path="/industries/small-business" element={<SmallBusinessVPN />} />
       </Route>
     <Route path="/app/personal/*" element={<RequireAuth><PersonalLayout/></RequireAuth>}>
   <Route path="overview" element={<PersonalOverview/>} />

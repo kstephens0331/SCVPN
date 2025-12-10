@@ -247,6 +247,21 @@ export default function FAQ() {
           content="VPN FAQ, SACVPN questions, WireGuard VPN help, VPN setup guide, VPN pricing questions, no-logs VPN, VPN free trial"
         />
         <link rel="canonical" href="https://www.sacvpn.com/faq" />
+        {/* FAQPage Schema for Rich Snippets */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": faqs.map(faq => ({
+              "@type": "Question",
+              "name": faq.q,
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": faq.a
+              }
+            }))
+          })}
+        </script>
       </Helmet>
 
       {/* Hero Section */}
