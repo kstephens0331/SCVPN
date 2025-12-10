@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { Mail, MessageCircle, Clock, Send, HelpCircle, Zap, CheckCircle } from "lucide-react";
+import { trackContactFormSubmit } from "../lib/analytics";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -40,6 +41,8 @@ export default function Contact() {
     // Simulate form submission
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Track contact form submission
+      trackContactFormSubmit(formState.subject);
       setIsSubmitted(true);
       setFormState({ name: "", email: "", subject: "", message: "" });
     } catch (err) {

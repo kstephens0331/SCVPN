@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
+import { trackDownload, trackPlatformSelected } from "../lib/analytics";
 import {
   Download as DownloadIcon,
   Monitor,
@@ -187,6 +188,9 @@ export default function Download() {
     }
 
     if (platform.downloadUrl) {
+      // Track the download event
+      const fileExt = platform.fileName?.split('.').pop() || 'exe';
+      trackDownload(platform.name, fileExt);
       // If we have a real download URL, trigger the download
       window.open(platform.downloadUrl, '_blank');
     } else {
@@ -418,7 +422,10 @@ export default function Download() {
                           key={key}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          onClick={() => setSelectedPlatform(key)}
+                          onClick={() => {
+                            setSelectedPlatform(key);
+                            trackPlatformSelected(platform.name);
+                          }}
                           className={`p-4 rounded-xl border transition-all ${
                             isSelected
                               ? "bg-brand-500/20 border-brand-500 text-white"

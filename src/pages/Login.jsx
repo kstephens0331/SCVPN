@@ -3,6 +3,7 @@ import { useLocation, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Helmet } from "react-helmet-async";
 import { Shield, Lock, Zap, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { trackLogin } from "../lib/analytics";
 
 export default function Login() {
   const loc = useLocation();
@@ -32,6 +33,8 @@ export default function Login() {
         return;
       }
 
+      // Track successful login
+      trackLogin('email');
       // Success - useAuthRedirect will handle navigation via onAuthStateChange
     } catch (err) {
       setErr(err.message || "An unexpected error occurred. Please try again.");

@@ -2,7 +2,8 @@ import { useParams, Link, Navigate } from 'react-router-dom';
 import { blogPosts } from '../data/blogPosts';
 import { Calendar, Clock, Tag, ArrowLeft, Share2 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
+import { trackBlogRead } from '../lib/analytics';
 
 // Dynamic content imports
 const contentComponents = {
@@ -34,6 +35,13 @@ export default function BlogPost() {
   const { slug } = useParams();
   const post = blogPosts.find(p => p.slug === slug);
   const ContentComponent = contentComponents[slug];
+
+  // Track blog post view
+  useEffect(() => {
+    if (post) {
+      trackBlogRead(post.title, post.slug, post.category);
+    }
+  }, [post]);
 
   if (!post) {
     return <Navigate to="/blog" replace />;

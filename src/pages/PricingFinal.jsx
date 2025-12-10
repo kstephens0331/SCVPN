@@ -1,5 +1,5 @@
 // src/pages/PricingFinal.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion } from "framer-motion";
@@ -14,6 +14,7 @@ import {
   formatSavings,
 } from "../lib/pricing-new.js";
 import FAQComparison from "../components/FAQComparison.jsx";
+import { trackViewPricing, trackBeginCheckout, trackPlanSelected, trackBillingPeriodChange } from "../lib/analytics";
 
 // Animation variants
 const fadeInUp = {
@@ -40,6 +41,9 @@ async function startCheckout(planCode, billingPeriod, setBusy) {
 
     const plan = PLAN_PRICING[planCode];
     const pricing = plan.pricing[billingPeriod];
+
+    // Track checkout begin event
+    trackBeginCheckout(plan.name, billingPeriod, pricing.totalCents / 100);
 
     const res = await fetch(`${API_URL}/api/checkout`, {
       method: "POST",
@@ -74,6 +78,11 @@ export default function PricingFinal() {
   const personalPlans = getPersonalPlans();
   const businessPlans = getBusinessPlans();
   const enterprisePlans = getEnterprisePlans();
+
+  // Track pricing page view
+  useEffect(() => {
+    trackViewPricing();
+  }, []);
 
   return (
     <>
@@ -441,7 +450,10 @@ function TransparentPlanCard({ plan, isEnterprise = false }) {
             return (
               <button
                 key={period.id}
-                onClick={() => setSelectedPeriod(period.id)}
+                onClick={() => {
+                  setSelectedPeriod(period.id);
+                  trackBillingPeriodChange(period.name);
+                }}
                 className={`
                   w-full text-left px-4 py-3 rounded-lg transition-all
                   ${isSelected
