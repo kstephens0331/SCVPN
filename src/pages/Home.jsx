@@ -521,8 +521,92 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Industries Section */}
       <section className="py-24 bg-white">
+        <div className="container-xl">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeInUp}
+            className="text-center max-w-3xl mx-auto mb-16"
+          >
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100 text-brand-700 text-sm font-medium mb-4">
+              <Building2 className="w-4 h-4" />
+              Industries We Serve
+            </span>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-gray-900">
+              VPN Solutions for{" "}
+              <span className="text-gradient">Every Industry</span>
+            </h2>
+            <p className="mt-4 text-lg text-gray-600">
+              Specialized security solutions tailored to meet the unique compliance and operational needs of your industry.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {[
+              {
+                title: "Healthcare",
+                description: "HIPAA-compliant VPN for protecting patient data and PHI",
+                link: "/industries/healthcare",
+                color: "from-blue-500 to-cyan-500",
+              },
+              {
+                title: "Legal & Law Firms",
+                description: "Attorney-client privilege protection and secure document sharing",
+                link: "/industries/legal",
+                color: "from-indigo-500 to-purple-500",
+              },
+              {
+                title: "Financial Services",
+                description: "Bank-grade encryption for financial data and transactions",
+                link: "/industries/finance",
+                color: "from-emerald-500 to-teal-500",
+              },
+              {
+                title: "Remote Teams",
+                description: "Secure distributed workforce with zero-trust architecture",
+                link: "/industries/remote-teams",
+                color: "from-purple-500 to-pink-500",
+              },
+              {
+                title: "Small Business",
+                description: "Affordable enterprise security without the complexity",
+                link: "/industries/small-business",
+                color: "from-orange-500 to-red-500",
+              },
+            ].map((industry, index) => (
+              <motion.div key={index} variants={fadeInUp}>
+                <Link
+                  to={industry.link}
+                  className="group block bg-gray-50 rounded-2xl p-6 border border-gray-100 hover:border-brand-200 hover:shadow-lg transition-all duration-300"
+                >
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${industry.color} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
+                    <Shield className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-brand-600 transition-colors">
+                    {industry.title}
+                  </h3>
+                  <p className="text-gray-600 mb-4">{industry.description}</p>
+                  <span className="inline-flex items-center gap-2 text-brand-600 font-medium">
+                    Learn More <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 bg-gradient-to-br from-dark-900 via-dark-800 to-brand-950 relative overflow-hidden">
         <div className="container-xl">
           <motion.div
             initial="hidden"

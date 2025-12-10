@@ -170,7 +170,7 @@ export default function Layout() {
 
         {/* Main Footer Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
             {/* Brand Column */}
             <div className="lg:col-span-1">
               <Link to="/" className="flex items-center gap-3 mb-6">
@@ -209,6 +209,8 @@ export default function Layout() {
               <ul className="space-y-3">
                 {[
                   { to: "/pricing", label: "Pricing" },
+                  { to: "/download", label: "Download" },
+                  { to: "/tools", label: "IP Lookup Tool" },
                   { to: "/blog", label: "Blog" },
                   { to: "/faq", label: "FAQ" },
                   { to: "/about", label: "About Us" },
@@ -233,6 +235,30 @@ export default function Layout() {
                     Referral Program
                   </Link>
                 </li>
+              </ul>
+            </div>
+
+            {/* Industries */}
+            <div>
+              <h4 className="text-lg font-semibold mb-6 text-white">Industries</h4>
+              <ul className="space-y-3">
+                {[
+                  { to: "/industries/healthcare", label: "Healthcare" },
+                  { to: "/industries/legal", label: "Legal & Law Firms" },
+                  { to: "/industries/finance", label: "Financial Services" },
+                  { to: "/industries/remote-teams", label: "Remote Teams" },
+                  { to: "/industries/small-business", label: "Small Business" },
+                ].map((link) => (
+                  <li key={link.to}>
+                    <Link
+                      to={link.to}
+                      className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center gap-2"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 

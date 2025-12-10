@@ -139,6 +139,48 @@ export const blogPosts = [
     tags: ["Router VPN", "Network Security", "Setup Guide", "Advanced"],
     image: "/blog/router-vpn.jpg",
     featured: false
+  },
+  {
+    id: 11,
+    slug: "how-to-choose-business-vpn",
+    title: "How to Choose a Business VPN: Complete Buyer's Guide 2025",
+    metaDescription: "Expert guide to choosing a business VPN. Compare features, security, pricing, and scalability to find the best enterprise VPN solution for your organization.",
+    excerpt: "Complete guide to selecting the right business VPN. Learn what features matter, questions to ask vendors, and how to evaluate enterprise VPN solutions.",
+    author: "SACVPN Team",
+    date: "2025-12-10",
+    readTime: "14 min read",
+    category: "Business",
+    tags: ["Business VPN", "Enterprise", "Buyer Guide", "Comparison"],
+    image: "/blog/business-vpn-guide.jpg",
+    featured: true
+  },
+  {
+    id: 12,
+    slug: "hipaa-vpn-requirements-healthcare",
+    title: "HIPAA VPN Requirements: Complete Healthcare Compliance Guide",
+    metaDescription: "Complete guide to HIPAA VPN requirements for healthcare. Learn how VPNs protect ePHI, meet technical safeguards, and ensure healthcare compliance.",
+    excerpt: "Essential guide to HIPAA-compliant VPN solutions for healthcare organizations. Understand technical safeguards, ePHI protection, and compliance requirements.",
+    author: "SACVPN Team",
+    date: "2025-12-10",
+    readTime: "16 min read",
+    category: "Business",
+    tags: ["HIPAA", "Healthcare", "Compliance", "Enterprise VPN"],
+    image: "/blog/hipaa-vpn.jpg",
+    featured: true
+  },
+  {
+    id: 13,
+    slug: "remote-work-security-best-practices",
+    title: "Remote Work Security Best Practices: Protect Your Distributed Team",
+    metaDescription: "Comprehensive remote work security guide. Learn best practices, VPN deployment, and security policies to protect your distributed workforce in 2025.",
+    excerpt: "Essential security practices for remote teams. From VPN deployment to security policies, protect your distributed workforce from cyber threats.",
+    author: "SACVPN Team",
+    date: "2025-12-10",
+    readTime: "15 min read",
+    category: "Business",
+    tags: ["Remote Work", "Security", "Best Practices", "Enterprise"],
+    image: "/blog/remote-security.jpg",
+    featured: false
   }
 ];
 

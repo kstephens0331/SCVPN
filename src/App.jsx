@@ -36,6 +36,7 @@ import AuthCallback from "./pages/AuthCallback";
 import TermsOfService from "./pages/TermsOfService.jsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 import Download from "./pages/Download.jsx";
+import Tools from "./pages/Tools.jsx";
 
 // Industry Landing Pages
 import HealthcareVPN from "./pages/industries/HealthcareVPN.jsx";
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/download" element={<Download />} />
+        <Route path="/tools" element={<Tools />} />
         {/* Industry Landing Pages */}
         <Route path="/industries/healthcare" element={<HealthcareVPN />} />
         <Route path="/industries/legal" element={<LegalVPN />} />

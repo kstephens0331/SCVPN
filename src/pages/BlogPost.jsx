@@ -17,6 +17,9 @@ const contentComponents = {
   'vpn-gaming-benefits': lazy(() => import('../data/blog-content/vpn-gaming-benefits.jsx')),
   'vpn-streaming-unblock-content': lazy(() => import('../data/blog-content/vpn-streaming-unblock-content.jsx')),
   'vpn-router-setup-guide': lazy(() => import('../data/blog-content/vpn-router-setup-guide.jsx')),
+  'how-to-choose-business-vpn': lazy(() => import('../data/blog-content/how-to-choose-business-vpn.jsx')),
+  'hipaa-vpn-requirements-healthcare': lazy(() => import('../data/blog-content/hipaa-vpn-requirements-healthcare.jsx')),
+  'remote-work-security-best-practices': lazy(() => import('../data/blog-content/remote-work-security-best-practices.jsx')),
 };
 
 function ContentLoader() {

@@ -427,6 +427,43 @@ export default function FAQ() {
               </p>
             </Link>
           </motion.div>
+
+          {/* Helpful Resources */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeInUp}
+            className="mt-20"
+          >
+            <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">Helpful Resources</h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              <Link to="/blog/what-is-vpn-complete-guide" className="block p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <span className="text-brand-600 text-sm font-medium">Guide</span>
+                <h4 className="font-semibold text-gray-900 mt-1">What is a VPN? Complete Guide</h4>
+              </Link>
+              <Link to="/blog/wireguard-vs-openvpn-comparison" className="block p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <span className="text-brand-600 text-sm font-medium">Comparison</span>
+                <h4 className="font-semibold text-gray-900 mt-1">WireGuard vs OpenVPN</h4>
+              </Link>
+              <Link to="/blog/vpn-setup-guide-beginners" className="block p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <span className="text-brand-600 text-sm font-medium">Tutorial</span>
+                <h4 className="font-semibold text-gray-900 mt-1">VPN Setup Guide for Beginners</h4>
+              </Link>
+              <Link to="/blog/how-to-choose-business-vpn" className="block p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <span className="text-brand-600 text-sm font-medium">Business</span>
+                <h4 className="font-semibold text-gray-900 mt-1">How to Choose a Business VPN</h4>
+              </Link>
+              <Link to="/blog/public-wifi-security-risks" className="block p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <span className="text-brand-600 text-sm font-medium">Security</span>
+                <h4 className="font-semibold text-gray-900 mt-1">Public WiFi Security Risks</h4>
+              </Link>
+              <Link to="/industries/remote-teams" className="block p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <span className="text-brand-600 text-sm font-medium">Industry</span>
+                <h4 className="font-semibold text-gray-900 mt-1">VPN for Remote Teams</h4>
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 
