@@ -15,7 +15,7 @@ const {
   SITE_URL = "https://www.sacvpn.com",
 
   // CORS
-  ALLOWED_ORIGINS = "https://www.sacvpn.com,https://sacvpn.com,http://localhost:5173,https://scvpn-production.up.railway.app",
+  ALLOWED_ORIGINS = "https://www.sacvpn.com,https://sacvpn.com,http://localhost:5173,http://localhost:1420,tauri://localhost,https://scvpn-production.up.railway.app",
 
   // Stripe
   STRIPE_SECRET_KEY,
