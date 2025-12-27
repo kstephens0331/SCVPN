@@ -200,6 +200,10 @@ export default function Layout() {
                   <Lock className="w-4 h-4 text-accent-lime" />
                   <span className="text-xs text-gray-300">Encrypted</span>
                 </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/30">
+                  <Shield className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs text-blue-300 font-semibold">SOC 2 Compliance In Progress</span>
+                </div>
               </div>
             </div>
 
@@ -210,10 +214,10 @@ export default function Layout() {
                 {[
                   { to: "/pricing", label: "Pricing" },
                   { to: "/download", label: "Download" },
+                  { to: "/gaming", label: "VPN for Gaming" },
+                  { to: "/personal", label: "Personal Privacy" },
+                  { to: "/compare", label: "Compare VPNs" },
                   { to: "/tools", label: "IP Lookup Tool" },
-                  { to: "/blog", label: "Blog" },
-                  { to: "/faq", label: "FAQ" },
-                  { to: "/about", label: "About Us" },
                 ].map((link) => (
                   <li key={link.to}>
                     <Link
@@ -291,8 +295,8 @@ export default function Layout() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 text-gray-400">
                   <Mail className="w-5 h-5 text-brand-400" />
-                  <a href="mailto:support@sacvpn.com" className="hover:text-white transition-colors">
-                    support@sacvpn.com
+                  <a href="mailto:info@stephenscode.dev" className="hover:text-white transition-colors">
+                    info@stephenscode.dev
                   </a>
                 </div>
                 <div className="flex items-center gap-3 text-gray-400">

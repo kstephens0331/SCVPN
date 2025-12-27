@@ -163,6 +163,10 @@ export default function Home() {
                   </div>
                   <span className="text-gray-400 text-sm">4.9/5 Rating</span>
                 </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <Shield className="w-5 h-5 text-blue-400" />
+                  <span className="text-blue-300 text-sm font-semibold">SOC 2 Compliance In Progress</span>
+                </div>
               </motion.div>
             </motion.div>
 
