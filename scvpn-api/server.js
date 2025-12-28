@@ -778,12 +778,33 @@ async function init() {
       });
 
     } catch (error) {
-      app.log.error({
+      // Enhanced error logging to diagnose SSH/key generation issues
+      const errorDetails = {
         error: error.message,
         stack: error.stack,
-        deviceId: req.body?.device_id
-      }, "🔑 [generate-key] ❌ FAILED to generate WireGuard key");
-      return reply.code(500).send({ error: error.message || "Failed to generate keys" });
+        deviceId: req.body?.device_id,
+        errorName: error.name,
+        errorCode: error.code,
+        // Check SSH configuration
+        sshPasswordConfigured: !!process.env.VPN_NODE_SSH_PASSWORD,
+        sshKeyPathConfigured: !!process.env.VPN_NODE_SSH_KEY_PATH
+      };
+
+      app.log.error(errorDetails, "🔑 [generate-key] ❌ FAILED to generate WireGuard key");
+
+      // Return more detailed error for debugging
+      return reply.code(500).send({
+        error: error.message || "Failed to generate keys",
+        details: {
+          type: error.name,
+          sshConfigured: !!process.env.VPN_NODE_SSH_PASSWORD || !!process.env.VPN_NODE_SSH_KEY_PATH,
+          hint: error.message?.includes('SSH') || error.message?.includes('timeout')
+            ? 'SSH connection to VPN node failed. Check VPN_NODE_SSH_PASSWORD env var and node SSH settings.'
+            : error.message?.includes('No available')
+            ? 'All VPN nodes are at capacity or offline.'
+            : 'Check Railway logs for detailed error information.'
+        }
+      });
     }
   });
 
@@ -1260,6 +1281,86 @@ async function init() {
     } catch (error) {
       req.log.error({ error }, "Error checking WireGuard health");
       return reply.code(500).send({ error: "Health check failed" });
+    }
+  });
+
+  // SSH diagnostic endpoint - tests SSH connectivity to VPN nodes
+  app.get("/api/wireguard/diagnose-ssh", async (req, reply) => {
+    try {
+      if (!supabase) {
+        return reply.code(500).send({ error: "Database not available" });
+      }
+
+      const results = {
+        timestamp: new Date().toISOString(),
+        ssh_password_configured: !!process.env.VPN_NODE_SSH_PASSWORD,
+        ssh_key_path_configured: !!process.env.VPN_NODE_SSH_KEY_PATH,
+        nodes: []
+      };
+
+      // Get all active nodes
+      const { data: nodes, error } = await supabase
+        .from("vpn_nodes")
+        .select("id, name, public_ip, ssh_host, ssh_user, ssh_port, management_type, interface_name")
+        .eq("is_active", true);
+
+      if (error) {
+        return reply.code(500).send({ error: error.message });
+      }
+
+      for (const node of nodes || []) {
+        const nodeResult = {
+          name: node.name,
+          ssh_connection: `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}:${node.ssh_port || 22}`,
+          management_type: node.management_type,
+          interface_name: node.interface_name,
+          has_ssh_host: !!node.ssh_host,
+          has_ssh_user: !!node.ssh_user,
+          ssh_test: null,
+          wg_show_test: null
+        };
+
+        // Test SSH connectivity with a simple command
+        if (wgManager && node.management_type === 'ssh') {
+          try {
+            // Test with 'echo test' command
+            const sshResult = await wgManager.executeSSHCommand(node, 'echo SSH_OK');
+            nodeResult.ssh_test = {
+              success: true,
+              output: sshResult.trim()
+            };
+
+            // Test WireGuard show command
+            try {
+              const useSudo = node.ssh_user && node.ssh_user !== 'root';
+              const wgCmd = useSudo ? 'sudo wg show' : 'wg show';
+              const wgResult = await wgManager.executeSSHCommand(node, wgCmd);
+              nodeResult.wg_show_test = {
+                success: true,
+                output: wgResult.substring(0, 500) // Truncate for safety
+              };
+            } catch (wgErr) {
+              nodeResult.wg_show_test = {
+                success: false,
+                error: wgErr.message
+              };
+            }
+          } catch (sshErr) {
+            nodeResult.ssh_test = {
+              success: false,
+              error: sshErr.message
+            };
+          }
+        }
+
+        results.nodes.push(nodeResult);
+      }
+
+      return reply.send(results);
+
+    } catch (error) {
+      req.log.error({ error }, "Error diagnosing SSH");
+      return reply.code(500).send({ error: error.message });
     }
   });
 
