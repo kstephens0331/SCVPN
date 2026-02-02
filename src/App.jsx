@@ -45,6 +45,11 @@ import FinanceVPN from "./pages/industries/FinanceVPN.jsx";
 import RemoteTeamsVPN from "./pages/industries/RemoteTeamsVPN.jsx";
 import SmallBusinessVPN from "./pages/industries/SmallBusinessVPN.jsx";
 
+// Use Case Landing Pages
+import GamingVPN from "./pages/use-cases/GamingVPN.jsx";
+import PersonalVPN from "./pages/use-cases/PersonalVPN.jsx";
+import Compare from "./pages/Compare.jsx";
+
 import useAuthRedirect from './utils/useAuthRedirect';
 import useAutoLogout from './utils/useAutoLogout';
 
@@ -76,6 +81,10 @@ export default function App() {
         <Route path="/industries/finance" element={<FinanceVPN />} />
         <Route path="/industries/remote-teams" element={<RemoteTeamsVPN />} />
         <Route path="/industries/small-business" element={<SmallBusinessVPN />} />
+        {/* Use Case Landing Pages */}
+        <Route path="/gaming" element={<GamingVPN />} />
+        <Route path="/personal" element={<PersonalVPN />} />
+        <Route path="/compare" element={<Compare />} />
       </Route>
     <Route path="/app/personal/*" element={<RequireAuth><PersonalLayout/></RequireAuth>}>
   <Route path="overview" element={<PersonalOverview/>} />

@@ -131,10 +131,10 @@ export default function Contact() {
                   Our team typically responds within 2-4 hours.
                 </p>
                 <a
-                  href="mailto:support@sacvpn.com"
+                  href="mailto:info@stephenscode.dev"
                   className="text-brand-600 font-medium hover:text-brand-700"
                 >
-                  support@sacvpn.com
+                  info@stephenscode.dev
                 </a>
               </motion.div>
 
@@ -188,10 +188,10 @@ export default function Contact() {
                   For enterprise plans and partnerships.
                 </p>
                 <a
-                  href="mailto:business@sacvpn.com"
+                  href="mailto:info@stephenscode.dev"
                   className="text-brand-600 font-medium hover:text-brand-700"
                 >
-                  business@sacvpn.com
+                  info@stephenscode.dev
                 </a>
               </motion.div>
             </motion.div>

@@ -415,11 +415,11 @@ export class EmailService {
       <span class="step-number">1</span>
       <strong>Download WireGuard App</strong>
       <div style="text-align: center; margin-top: 15px;">
-        <a href="https://apps.apple.com/us/app/wireguard/id1441195209" class="app-store">
-          <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on App Store" height="40">
+        <a href="https://apps.apple.com/us/app/wireguard/id1441195209" class="app-store" style="display: inline-block; margin: 10px;">
+          <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83&amp;releaseDate=1280592000" alt="Download on App Store" height="40" style="display: inline-block;">
         </a>
-        <a href="https://play.google.com/store/apps/details?id=com.wireguard.android" class="app-store">
-          <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60">
+        <a href="https://play.google.com/store/apps/details?id=com.wireguard.android" class="app-store" style="display: inline-block; margin: 10px;">
+          <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60" style="display: inline-block;">
         </a>
       </div>
     </div>
@@ -429,7 +429,7 @@ export class EmailService {
       <strong>Scan QR Code</strong>
       <div class="qr-container">
         <p>Open WireGuard app → Tap <strong>"+"</strong> → <strong>"Create from QR code"</strong></p>
-        <img src="${qrCodeDataURL}" alt="WireGuard QR Code" class="qr-code">
+        <img src="${qrCodeDataURL}" alt="WireGuard QR Code" class="qr-code" style="max-width: 300px; height: auto; display: block; margin: 0 auto;">
         <p style="color: #999; font-size: 14px; margin-top: 15px;">Scan this code with your camera</p>
       </div>
     </div>

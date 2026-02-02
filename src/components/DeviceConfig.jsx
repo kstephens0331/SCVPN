@@ -246,7 +246,7 @@ export default function DeviceConfig({ deviceId, deviceName, onClose }) {
               <a href="/support" className="underline hover:text-yellow-900">
                 setup guide
               </a>{' '}
-              or contact support at support@sacvpn.com
+              or contact support at info@stephenscode.dev
             </p>
           </div>
         </div>

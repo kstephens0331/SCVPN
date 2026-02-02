@@ -26,3 +26,24 @@ dist-ssr
 .env
 .env/*.env.*
 supabase/functions/.env
+
+# Supabase temp files
+supabase/.temp/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Root-level SQL scripts (one-time operations)
+/*.sql
+
+# Root-level shell/PowerShell scripts
+/*.sh
+/*.ps1
+
+# Root-level markdown docs (planning/instructions)
+/DESKTOP_APP_BUILD_INSTRUCTIONS.md
+/TEST_VPN_SERVERS_FUNCTION.md
+/WEBSITE_OVERHAUL_PLAN.md
+
+# Misc temp files
+_ul

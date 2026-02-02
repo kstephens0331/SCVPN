@@ -187,6 +187,28 @@
     <priority>0.7</priority>
   </url>
 
+  <!-- Use Case Landing Pages -->
+  <url>
+    <loc>https://www.sacvpn.com/gaming</loc>
+    <lastmod>2025-12-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.sacvpn.com/personal</loc>
+    <lastmod>2025-12-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.sacvpn.com/compare</loc>
+    <lastmod>2025-12-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
   <!-- Legal Pages -->
   <url>
     <loc>https://www.sacvpn.com/terms</loc>
