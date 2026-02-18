@@ -28,6 +28,7 @@ export default function Layout() {
     { to: "/blog", label: "Blog" },
     { to: "/faq", label: "FAQ" },
     { to: "/about", label: "About" },
+    { to: "/partners", label: "Partners" },
     { to: "/contact", label: "Contact" },
   ];
 
@@ -273,6 +274,7 @@ export default function Layout() {
                 {[
                   { to: "/contact", label: "Contact Us" },
                   { to: "/faq", label: "Help Center" },
+                  { to: "/partners", label: "Trusted Partners" },
                   { to: "/terms", label: "Terms of Service" },
                   { to: "/privacy", label: "Privacy Policy" },
                 ].map((link) => (

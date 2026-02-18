@@ -49,6 +49,7 @@ import SmallBusinessVPN from "./pages/industries/SmallBusinessVPN.jsx";
 import GamingVPN from "./pages/use-cases/GamingVPN.jsx";
 import PersonalVPN from "./pages/use-cases/PersonalVPN.jsx";
 import Compare from "./pages/Compare.jsx";
+import TrustedPartners from "./pages/TrustedPartners.jsx";
 
 import useAuthRedirect from './utils/useAuthRedirect';
 import useAutoLogout from './utils/useAutoLogout';
@@ -85,6 +86,7 @@ export default function App() {
         <Route path="/gaming" element={<GamingVPN />} />
         <Route path="/personal" element={<PersonalVPN />} />
         <Route path="/compare" element={<Compare />} />
+        <Route path="/partners" element={<TrustedPartners />} />
       </Route>
     <Route path="/app/personal/*" element={<RequireAuth><PersonalLayout/></RequireAuth>}>
   <Route path="overview" element={<PersonalOverview/>} />
