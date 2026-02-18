@@ -47,3 +47,6 @@ supabase/.temp/
 
 # Misc temp files
 _ul
+
+.claude/
+CLAUDE.md
