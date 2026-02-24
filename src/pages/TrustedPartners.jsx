@@ -95,6 +95,13 @@ const partners = [
       "Houston's trusted partner for ethical, inclusive clinical trials spanning cardiology, neurology, dermatology, ophthalmology, and family medicine. Every study is IRB-approved, and compensation is available for qualified participants.",
     url: "https://justwellclinical.org",
   },
+  {
+    name: "Lefty Cartel",
+    category: "Sports & Community",
+    description:
+      "A membership community and apparel brand built for southpaw ball players. Lefty Cartel brings together training resources, an exclusive online store, and a veteran-backed brotherhood that celebrates the left-handed game.",
+    url: "https://leftycartel.net",
+  },
 ];
 
 export default function TrustedPartners() {
