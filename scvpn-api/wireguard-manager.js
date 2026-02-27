@@ -261,18 +261,21 @@ export class WireGuardManager {
 
     const keyPath = join(tmpdir(), 'vpn_node_key');
 
-    // Detect format and normalize
+    // Railway may store newlines as literal \n — convert to real newlines
+    keyContent = keyContent.replace(/\\n/g, '\n').trim();
+
+    // If missing PEM headers, wrap the base64 body in proper OpenSSH format
     if (!keyContent.includes('-----BEGIN')) {
-      // Likely base64-encoded — decode it
-      try {
-        keyContent = Buffer.from(keyContent, 'base64').toString('utf8');
-      } catch (e) {
-        this.logger.error({ error: e.message }, 'Failed to base64-decode SSH key');
-      }
+      // Strip any whitespace/newlines from the base64 body
+      const b64 = keyContent.replace(/\s+/g, '');
+      // Wrap at 70 chars per line (OpenSSH standard)
+      const lines = b64.match(/.{1,70}/g) || [];
+      keyContent = '-----BEGIN OPENSSH PRIVATE KEY-----\n' +
+                   lines.join('\n') + '\n' +
+                   '-----END OPENSSH PRIVATE KEY-----';
     }
 
-    // Railway may store newlines as literal \n — convert to real newlines
-    let normalized = keyContent.replace(/\\n/g, '\n').trim() + '\n';
+    const normalized = keyContent.trim() + '\n';
 
     this.logger.info({
       keyPath,
