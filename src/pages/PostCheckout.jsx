@@ -33,7 +33,7 @@ export default function PostCheckout() {
     try {
       if (!sessionId) { setLoading(false); return; }
 
-      const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
+      const api = import.meta.env.VITE_API_URL || "https://api.sacvpn.com";
       const res = await fetch(`${api}/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`);
       const out = await res.json();
 
@@ -78,7 +78,7 @@ export default function PostCheckout() {
     }
   }
 
- const api = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
+ const api = import.meta.env.VITE_API_URL || "https://api.sacvpn.com";
 const claimRes = await fetch(`${api}/api/checkout/claim`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },

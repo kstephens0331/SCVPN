@@ -7,15 +7,16 @@ import fastifyRawBody from "fastify-raw-body";
 import QRCode from "qrcode";
 import { WireGuardManager } from "./wireguard-manager.js";
 import { EmailService } from "./email-service.js";
+import db from "./db.js";
 
 // ---- Env ----
 const {
-  PORT = "8080",
+  PORT = "3000",
   NODE_ENV = "production",
   SITE_URL = "https://www.sacvpn.com",
 
   // CORS
-  ALLOWED_ORIGINS = "https://www.sacvpn.com,https://sacvpn.com,http://localhost:5173,http://localhost:1420,tauri://localhost,https://tauri.localhost,http://tauri.localhost,https://scvpn-production.up.railway.app",
+  ALLOWED_ORIGINS = "https://www.sacvpn.com,https://sacvpn.com,http://localhost:5173,http://localhost:1420,tauri://localhost,https://tauri.localhost,http://tauri.localhost",
 
   // Stripe
   STRIPE_SECRET_KEY,
@@ -25,7 +26,7 @@ const {
   STRIPE_PRICE_BUSINESS50,
   STRIPE_PRICE_BUSINESS100,
 
-  // Supabase (optional here)
+  // Supabase (auth only — free tier)
   SCVPN_SUPABASE_URL,
   SCVPN_SUPABASE_SERVICE_KEY,
   STRIPE_WEBHOOK_SECRET,
@@ -52,6 +53,7 @@ async function init() {
     ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" })
     : null;
 
+  // Supabase client — auth only (JWT verification)
   const supabase =
     SCVPN_SUPABASE_URL && SCVPN_SUPABASE_SERVICE_KEY
       ? createClient(SCVPN_SUPABASE_URL, SCVPN_SUPABASE_SERVICE_KEY, {
@@ -59,8 +61,8 @@ async function init() {
         })
       : null;
 
-  // Initialize WireGuard Manager
-  const wgManager = supabase ? new WireGuardManager(supabase, app.log) : null;
+  // Initialize WireGuard Manager with pg pool
+  const wgManager = new WireGuardManager(db, app.log);
 
   // Initialize Email Service with SendGrid
   const emailService = new EmailService(SENDGRID_API_KEY, app.log);
@@ -184,21 +186,18 @@ async function init() {
       const body = req.body || {};
       const {
         plan_code,
-        billing_period = "monthly", // NEW: billing period support
-        stripe_price_id, // NEW: direct price ID from frontend
+        billing_period = "monthly",
+        stripe_price_id,
         account_type = "personal",
         quantity = 1,
         customer_email,
       } = body;
 
-      // Log the inputs (safe)
       req.log.info(
         { plan_code, billing_period, account_type, quantity, has_email: !!customer_email },
         "[checkout] incoming"
       );
 
-      // Use direct price ID if provided (new pricing system)
-      // Otherwise fall back to legacy PRICE_MAP
       let price = stripe_price_id;
       if (!price) {
         price = PRICE_MAP[plan_code];
@@ -208,7 +207,6 @@ async function init() {
         }
       }
 
-      // Label used only for metadata / UI
       const PLAN_LABELS = {
         personal: "Personal",
         gaming: "Gaming",
@@ -228,7 +226,7 @@ async function init() {
         metadata: {
           plan_code,
           plan_label,
-          billing_period, // NEW: track billing period in metadata
+          billing_period,
           account_type,
           quantity: String(quantity),
         },
@@ -239,7 +237,6 @@ async function init() {
             billing_period,
             account_type,
             quantity: String(quantity),
-            // user_id will be added after user claims the subscription in post-checkout
           },
         },
       });
@@ -288,7 +285,6 @@ async function init() {
 
   app.post("/api/checkout/claim", async (req, reply) => {
     try {
-      if (!supabase) return reply.code(500).send({ error: "supabase service not configured" });
       if (!requireStripe(reply)) return;
 
       const {
@@ -303,11 +299,10 @@ async function init() {
       if (!email)      return reply.code(400).send({ error: "missing email" });
 
       // 1) Get user ID from email
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", email)
-        .maybeSingle();
+      const { rows: [profile] } = await db.query(
+        'SELECT id FROM profiles WHERE email = $1 LIMIT 1',
+        [email]
+      );
 
       if (!profile) {
         return reply.code(404).send({ error: "User not found. Please sign up first." });
@@ -316,36 +311,20 @@ async function init() {
       const userId = profile.id;
 
       // 2) Claim checkout session
-      const upd = await supabase
-        .from("checkout_sessions")
-        .update({ claimed_email: email, claimed_at: new Date().toISOString() })
-        .eq("id", session_id)
-        .is("claimed_email", null)
-        .select("*")
-        .maybeSingle();
-
-      if (upd.error && upd.error.code !== 'PGRST116') {
-        return reply.code(400).send({ error: upd.error.message });
-      }
+      const { rows: [updatedSession] } = await db.query(
+        'UPDATE checkout_sessions SET claimed_email = $1, claimed_at = $2 WHERE id = $3 AND claimed_email IS NULL RETURNING *',
+        [email, new Date().toISOString(), session_id]
+      );
 
       // If not found, create it
-      if (!upd.data) {
-        const ins = await supabase
-          .from("checkout_sessions")
-          .upsert({
-            id: session_id,
-            email,
-            plan_code: plan_code || null,
-            account_type,
-            quantity: Number(quantity || 1),
-            created_at: new Date().toISOString(),
-            claimed_email: email,
-            claimed_at: new Date().toISOString(),
-          }, { onConflict: "id" })
-          .select("*")
-          .maybeSingle();
-
-        if (ins.error) return reply.code(400).send({ error: ins.error.message });
+      if (!updatedSession) {
+        await db.query(
+          `INSERT INTO checkout_sessions (id, email, plan_code, account_type, quantity, created_at, claimed_email, claimed_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (id) DO UPDATE SET claimed_email = $7, claimed_at = $8`,
+          [session_id, email, plan_code || null, account_type, Number(quantity || 1),
+           new Date().toISOString(), email, new Date().toISOString()]
+        );
       }
 
       // 3) Get Stripe checkout session to find subscription
@@ -368,6 +347,7 @@ async function init() {
       });
 
       // 6) Create/update subscription in our database
+      const now = new Date().toISOString();
       const subscriptionData = {
         stripe_subscription_id: subscription.id,
         stripe_customer_id: subscription.customer,
@@ -377,86 +357,56 @@ async function init() {
         current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
         current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
         renews_at: subscription.cancel_at_period_end ? null : new Date(subscription.current_period_end * 1000).toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: now,
+        updated_at: now,
       };
 
       app.log.info({ subscriptionData }, "[claim] Attempting to save subscription");
 
-      // First check if subscription already exists
-      const { data: existingSub } = await supabase
-        .from("subscriptions")
-        .select("id")
-        .eq("stripe_subscription_id", subscription.id)
-        .maybeSingle();
+      // Check if subscription already exists
+      const { rows: [existingSub] } = await db.query(
+        'SELECT id FROM subscriptions WHERE stripe_subscription_id = $1 LIMIT 1',
+        [subscription.id]
+      );
 
-      let subError, subData;
+      let subData;
 
-      if (existingSub) {
-        // Update existing subscription
-        const result = await supabase
-          .from("subscriptions")
-          .update(subscriptionData)
-          .eq("stripe_subscription_id", subscription.id)
-          .select();
-        subError = result.error;
-        subData = result.data;
-      } else {
-        // Insert new subscription
-        const result = await supabase
-          .from("subscriptions")
-          .insert(subscriptionData)
-          .select();
-        subError = result.error;
-        subData = result.data;
-      }
-
-      if (subError) {
-        app.log.error({
-          error: subError,
-          code: subError.code,
-          message: subError.message,
-          details: subError.details,
-          hint: subError.hint
-        }, "[claim] Failed to save subscription with client - trying raw SQL");
-
-        // Fallback: Try raw SQL insert (bypasses RLS and client issues)
-        try {
-          const { data: sqlResult, error: sqlError } = await supabase.rpc('insert_subscription', {
-            p_stripe_subscription_id: subscription.id,
-            p_stripe_customer_id: subscription.customer,
-            p_user_id: userId,
-            p_plan: plan_code || 'unknown',
-            p_status: subscription.status,
-            p_current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            p_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            p_renews_at: subscription.cancel_at_period_end ? null : new Date(subscription.current_period_end * 1000).toISOString()
-          });
-
-          if (sqlError) {
-            app.log.error({ sqlError }, "[claim] Raw SQL insert also failed");
-            return reply.code(500).send({
-              error: "Failed to save subscription",
-              details: subError.message,
-              sqlDetails: sqlError.message
-            });
-          }
-
-          app.log.info({ userId, subId: subscription.id }, "[claim] Subscription saved via raw SQL");
-          subData = sqlResult;
-        } catch (fallbackError) {
-          app.log.error({ fallbackError }, "[claim] Fallback SQL failed");
-          return reply.code(500).send({
-            error: "Failed to save subscription",
-            details: subError.message,
-            hint: subError.hint
-          });
+      try {
+        if (existingSub) {
+          // Update existing subscription
+          const { rows } = await db.query(
+            `UPDATE subscriptions SET stripe_customer_id = $1, user_id = $2, plan = $3, status = $4,
+             current_period_start = $5, current_period_end = $6, renews_at = $7, updated_at = $8
+             WHERE stripe_subscription_id = $9 RETURNING *`,
+            [subscriptionData.stripe_customer_id, subscriptionData.user_id, subscriptionData.plan,
+             subscriptionData.status, subscriptionData.current_period_start, subscriptionData.current_period_end,
+             subscriptionData.renews_at, subscriptionData.updated_at, subscription.id]
+          );
+          subData = rows;
+        } else {
+          // Insert new subscription
+          const { rows } = await db.query(
+            `INSERT INTO subscriptions (stripe_subscription_id, stripe_customer_id, user_id, plan, status,
+             current_period_start, current_period_end, renews_at, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+            [subscriptionData.stripe_subscription_id, subscriptionData.stripe_customer_id,
+             subscriptionData.user_id, subscriptionData.plan, subscriptionData.status,
+             subscriptionData.current_period_start, subscriptionData.current_period_end,
+             subscriptionData.renews_at, subscriptionData.created_at, subscriptionData.updated_at]
+          );
+          subData = rows;
         }
+      } catch (dbErr) {
+        app.log.error({ error: dbErr.message }, "[claim] Failed to save subscription");
+        return reply.code(500).send({
+          error: "Failed to save subscription",
+          details: dbErr.message
+        });
       }
 
       app.log.info({ userId, subId: subscription.id, plan: plan_code, subData }, "[claim] Subscription linked to user");
 
-      // Resolve plan display name (used by both welcome + admin emails)
+      // Resolve plan display name
       const planNames = {
         personal: 'Personal',
         gaming: 'Gaming',
@@ -476,13 +426,12 @@ async function init() {
       try {
         await emailService.sendWelcomeEmail({
           userEmail: email,
-          userName: email.split('@')[0], // Use email prefix as name
+          userName: email.split('@')[0],
           planCode: plan_code,
           planName: planName
         });
         app.log.info({ email, plan: plan_code }, "[claim] Welcome email sent");
       } catch (emailErr) {
-        // Don't fail the claim if email fails
         app.log.error({ emailErr }, "[claim] Failed to send welcome email");
       }
 
@@ -509,7 +458,7 @@ async function init() {
   app.get("/api/billing/manage", async (req, reply) => {
     try {
       if (!requireStripe(reply)) return;
-      if (!supabase) return reply.code(500).send({ error: "supabase service not configured" });
+      if (!supabase) return reply.code(500).send({ error: "Auth service not configured" });
 
       // Get current user from session
       const authHeader = req.headers.authorization;
@@ -525,11 +474,10 @@ async function init() {
       }
 
       // Find customer's Stripe customer ID from subscriptions table
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("stripe_customer_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { rows: [sub] } = await db.query(
+        'SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1 LIMIT 1',
+        [user.id]
+      );
 
       if (!sub?.stripe_customer_id) {
         return reply.code(404).send({ error: "No active subscription found" });
@@ -560,7 +508,6 @@ async function init() {
         return reply.code(500).send("Server misconfigured");
       }
 
-      // Debug logging to understand what we're receiving
       app.log.info({
         hasRawBody: !!req.rawBody,
         rawBodyType: typeof req.rawBody,
@@ -573,8 +520,6 @@ async function init() {
 
       let event;
       try {
-        // IMPORTANT: use the raw *string* body for verification
-        // req.rawBody should be a Buffer or string from fastifyRawBody
         const rawBody = req.rawBody;
 
         if (!rawBody) {
@@ -595,80 +540,67 @@ async function init() {
       // Handle the events you care about
       switch (event.type) {
         case "checkout.session.completed": {
-          if (supabase) {
-            const s = event.data.object;
-            const qty = Number(s.metadata?.quantity) || s?.line_items?.data?.[0]?.quantity || 1;
-            const { error } = await supabase
-              .from("checkout_sessions")
-              .upsert({
-                id: s.id,
-                email: s.customer_details?.email || null,
-                plan_code: s.metadata?.plan_code || null,
-                billing_period: s.metadata?.billing_period || "monthly", // NEW: save billing period
-                account_type: s.metadata?.account_type || "personal",
-                quantity: qty,
-                created_at: new Date().toISOString(),
-              }, { onConflict: "id" });
-            if (error) app.log.error({ error }, "[webhook] upsert checkout_sessions failed");
+          const s = event.data.object;
+          const qty = Number(s.metadata?.quantity) || s?.line_items?.data?.[0]?.quantity || 1;
+          try {
+            await db.query(
+              `INSERT INTO checkout_sessions (id, email, plan_code, billing_period, account_type, quantity, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               ON CONFLICT (id) DO UPDATE SET email = $2, plan_code = $3, billing_period = $4, account_type = $5, quantity = $6`,
+              [s.id, s.customer_details?.email || null, s.metadata?.plan_code || null,
+               s.metadata?.billing_period || "monthly", s.metadata?.account_type || "personal",
+               qty, new Date().toISOString()]
+            );
+          } catch (dbErr) {
+            app.log.error({ error: dbErr.message }, "[webhook] upsert checkout_sessions failed");
           }
           break;
         }
         case "customer.subscription.created":
         case "customer.subscription.updated": {
-          if (supabase) {
-            const sub = event.data.object;
-            const userId = sub.metadata?.user_id;
+          const sub = event.data.object;
+          const userId = sub.metadata?.user_id;
 
-            if (!userId) {
-              app.log.warn({ subId: sub.id }, "[webhook] subscription missing user_id metadata");
-              break;
-            }
+          if (!userId) {
+            app.log.warn({ subId: sub.id }, "[webhook] subscription missing user_id metadata");
+            break;
+          }
 
-            // Validate timestamps before converting
-            if (!sub.current_period_start || !sub.current_period_end) {
-              app.log.warn({ subId: sub.id }, "[webhook] subscription missing period timestamps");
-              break;
-            }
+          if (!sub.current_period_start || !sub.current_period_end) {
+            app.log.warn({ subId: sub.id }, "[webhook] subscription missing period timestamps");
+            break;
+          }
 
-            const { error } = await supabase
-              .from("subscriptions")
-              .upsert({
-                stripe_subscription_id: sub.id,
-                stripe_customer_id: sub.customer,
-                user_id: userId,
-                plan: sub.metadata?.plan_code || "unknown",
-                status: sub.status,
-                current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-                current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-                renews_at: sub.cancel_at_period_end ? null : new Date(sub.current_period_end * 1000).toISOString(),
-                updated_at: new Date().toISOString(),
-              }, { onConflict: "stripe_subscription_id" });
-
-            if (error) {
-              app.log.error({ error, subId: sub.id }, "[webhook] upsert subscription failed");
-            } else {
-              app.log.info({ subId: sub.id, userId, status: sub.status }, "[webhook] subscription saved");
-            }
+          try {
+            await db.query(
+              `INSERT INTO subscriptions (stripe_subscription_id, stripe_customer_id, user_id, plan, status,
+               current_period_start, current_period_end, renews_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+               ON CONFLICT (stripe_subscription_id) DO UPDATE SET
+               stripe_customer_id = $2, user_id = $3, plan = $4, status = $5,
+               current_period_start = $6, current_period_end = $7, renews_at = $8, updated_at = $9`,
+              [sub.id, sub.customer, userId, sub.metadata?.plan_code || "unknown", sub.status,
+               new Date(sub.current_period_start * 1000).toISOString(),
+               new Date(sub.current_period_end * 1000).toISOString(),
+               sub.cancel_at_period_end ? null : new Date(sub.current_period_end * 1000).toISOString(),
+               new Date().toISOString()]
+            );
+            app.log.info({ subId: sub.id, userId, status: sub.status }, "[webhook] subscription saved");
+          } catch (dbErr) {
+            app.log.error({ error: dbErr.message, subId: sub.id }, "[webhook] upsert subscription failed");
           }
           break;
         }
         case "customer.subscription.deleted": {
-          if (supabase) {
-            const sub = event.data.object;
-            const { error } = await supabase
-              .from("subscriptions")
-              .update({
-                status: "canceled",
-                renews_at: null,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("stripe_subscription_id", sub.id);
-
-            if (error) {
-              app.log.error({ error, subId: sub.id }, "[webhook] cancel subscription failed");
-            } else {
-              app.log.info({ subId: sub.id }, "[webhook] subscription canceled");
-            }
+          const sub = event.data.object;
+          try {
+            await db.query(
+              'UPDATE subscriptions SET status = $1, renews_at = $2, updated_at = $3 WHERE stripe_subscription_id = $4',
+              ["canceled", null, new Date().toISOString(), sub.id]
+            );
+            app.log.info({ subId: sub.id }, "[webhook] subscription canceled");
+          } catch (dbErr) {
+            app.log.error({ error: dbErr.message, subId: sub.id }, "[webhook] cancel subscription failed");
           }
           break;
         }
@@ -689,27 +621,27 @@ async function init() {
   // Generate WireGuard key immediately for a device (called from frontend)
   app.post("/api/wireguard/generate-key", async (req, reply) => {
     try {
-      app.log.info({ body: req.body }, "🔑 [generate-key] ENDPOINT HIT - Request received");
+      app.log.info({ body: req.body }, "[generate-key] ENDPOINT HIT - Request received");
 
       if (!wgManager) {
-        app.log.error("🔑 [generate-key] WireGuard manager not initialized");
+        app.log.error("[generate-key] WireGuard manager not initialized");
         return reply.code(500).send({ error: "WireGuard manager not initialized" });
       }
       if (!supabase) {
-        app.log.error("🔑 [generate-key] Supabase not initialized");
-        return reply.code(500).send({ error: "Supabase not initialized" });
+        app.log.error("[generate-key] Auth service not initialized");
+        return reply.code(500).send({ error: "Auth service not initialized" });
       }
 
       const { device_id } = req.body || {};
       if (!device_id) {
-        app.log.warn("🔑 [generate-key] Missing device_id in request");
+        app.log.warn("[generate-key] Missing device_id in request");
         return reply.code(400).send({ error: "Missing device_id" });
       }
 
-      // Get authenticated user
+      // Get authenticated user (Supabase Auth — JWT verification)
       const authHeader = req.headers.authorization;
       if (!authHeader) {
-        app.log.warn("🔑 [generate-key] Missing authorization header");
+        app.log.warn("[generate-key] Missing authorization header");
         return reply.code(401).send({ error: "Missing authorization" });
       }
 
@@ -717,27 +649,25 @@ async function init() {
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
       if (authError || !user) {
-        app.log.warn({ authError }, "🔑 [generate-key] Unauthorized");
+        app.log.warn({ authError }, "[generate-key] Unauthorized");
         return reply.code(401).send({ error: "Unauthorized" });
       }
 
-      app.log.info({ userId: user.id, deviceId: device_id }, "🔑 [generate-key] User authenticated");
+      app.log.info({ userId: user.id, deviceId: device_id }, "[generate-key] User authenticated");
 
       // Verify device belongs to user
-      const { data: device, error: deviceError } = await supabase
-        .from("devices")
-        .select("id, name, platform, user_id")
-        .eq("id", device_id)
-        .eq("user_id", user.id)
-        .single();
+      const { rows: [device] } = await db.query(
+        'SELECT id, name, platform, user_id FROM devices WHERE id = $1 AND user_id = $2 LIMIT 1',
+        [device_id, user.id]
+      );
 
-      if (deviceError || !device) {
-        app.log.warn({ deviceError, device_id }, "🔑 [generate-key] Device not found");
+      if (!device) {
+        app.log.warn({ device_id }, "[generate-key] Device not found");
         return reply.code(404).send({ error: "Device not found or access denied" });
       }
 
       // Generate WireGuard config
-      app.log.info({ deviceId: device_id, userId: user.id, deviceName: device.name }, "🔑 [generate-key] ✅ Starting WireGuard key generation - SSH commands should follow");
+      app.log.info({ deviceId: device_id, userId: user.id, deviceName: device.name }, "[generate-key] Starting WireGuard key generation");
 
       const result = await wgManager.generateDeviceConfig(
         device_id,
@@ -745,7 +675,7 @@ async function init() {
         null // Let system choose best node
       );
 
-      app.log.info({ configId: result.config.id, nodeId: result.config.node_id }, "🔑 [generate-key] ✅ Key generation completed successfully");
+      app.log.info({ configId: result.config.id, nodeId: result.config.node_id }, "[generate-key] Key generation completed successfully");
 
       // Send email with config and QR code
       try {
@@ -758,11 +688,10 @@ async function init() {
         });
 
         // Get user profile for email
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("email, full_name")
-          .eq("id", user.id)
-          .single();
+        const { rows: [profile] } = await db.query(
+          'SELECT email, full_name FROM profiles WHERE id = $1 LIMIT 1',
+          [user.id]
+        );
 
         if (profile?.email && emailService) {
           const emailResult = await emailService.sendVPNSetupEmail({
@@ -791,31 +720,28 @@ async function init() {
       });
 
     } catch (error) {
-      // Enhanced error logging to diagnose SSH/key generation issues
       const errorDetails = {
         error: error.message,
         stack: error.stack,
         deviceId: req.body?.device_id,
         errorName: error.name,
         errorCode: error.code,
-        // Check SSH configuration
         sshPasswordConfigured: !!process.env.VPN_NODE_SSH_PASSWORD,
         sshKeyPathConfigured: !!process.env.VPN_NODE_SSH_KEY_PATH
       };
 
-      app.log.error(errorDetails, "🔑 [generate-key] ❌ FAILED to generate WireGuard key");
+      app.log.error(errorDetails, "[generate-key] FAILED to generate WireGuard key");
 
-      // Return more detailed error for debugging
       return reply.code(500).send({
         error: error.message || "Failed to generate keys",
         details: {
           type: error.name,
           sshConfigured: !!process.env.VPN_NODE_SSH_PASSWORD || !!process.env.VPN_NODE_SSH_KEY_PATH,
           hint: error.message?.includes('SSH') || error.message?.includes('timeout')
-            ? 'SSH connection to VPN node failed. Check VPN_NODE_SSH_PASSWORD env var and node SSH settings.'
+            ? 'SSH connection to VPN node failed. Check SSH settings.'
             : error.message?.includes('No available')
             ? 'All VPN nodes are at capacity or offline.'
-            : 'Check Railway logs for detailed error information.'
+            : 'Check server logs for detailed error information.'
         }
       });
     }
@@ -828,15 +754,18 @@ async function init() {
         return reply.code(500).send({ error: "WireGuard manager not initialized" });
       }
 
-      const { data: requests, error } = await supabase
-        .from("key_requests")
-        .select("*, devices(*)")
-        .eq("status", "pending")
-        .order("requested_at", { ascending: true })
-        .limit(10); // Process in batches
+      const { rows: requests } = await db.query(
+        `SELECT kr.*, d.id AS device_db_id, d.name AS device_name, d.platform AS device_platform, d.user_id AS device_user_id
+         FROM key_requests kr
+         LEFT JOIN devices d ON kr.device_id = d.id
+         WHERE kr.status = 'pending'
+         ORDER BY kr.requested_at ASC
+         LIMIT 10`
+      );
 
-      if (error) {
-        return reply.code(500).send({ error: error.message });
+      // Reshape to match nested format the code expects
+      for (const r of requests) {
+        r.devices = { id: r.device_db_id, name: r.device_name, platform: r.device_platform, user_id: r.device_user_id };
       }
 
       const results = [];
@@ -844,13 +773,10 @@ async function init() {
       for (const request of requests || []) {
         try {
           // Mark as processing
-          await supabase
-            .from("key_requests")
-            .update({
-              status: "processing",
-              processed_at: new Date().toISOString()
-            })
-            .eq("id", request.id);
+          await db.query(
+            'UPDATE key_requests SET status = $1, processed_at = $2 WHERE id = $3',
+            ["processing", new Date().toISOString(), request.id]
+          );
 
           // Generate device config
           const result = await wgManager.generateDeviceConfig(
@@ -860,17 +786,13 @@ async function init() {
           );
 
           // Mark as completed
-          await supabase
-            .from("key_requests")
-            .update({
-              status: "completed",
-              completed_at: new Date().toISOString()
-            })
-            .eq("id", request.id);
+          await db.query(
+            'UPDATE key_requests SET status = $1, completed_at = $2 WHERE id = $3',
+            ["completed", new Date().toISOString(), request.id]
+          );
 
           // Send email notification with QR code
           try {
-            // Generate QR code from config
             const qrCodeDataURL = await QRCode.toDataURL(result.wgConfig, {
               errorCorrectionLevel: 'M',
               type: 'image/png',
@@ -879,11 +801,10 @@ async function init() {
             });
 
             // Get user email from profiles
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("email, full_name")
-              .eq("id", request.user_id)
-              .single();
+            const { rows: [profile] } = await db.query(
+              'SELECT email, full_name FROM profiles WHERE id = $1 LIMIT 1',
+              [request.user_id]
+            );
 
             if (profile?.email) {
               await emailService.sendVPNSetupEmail({
@@ -909,14 +830,10 @@ async function init() {
           req.log.info({ requestId: request.id, deviceId: request.device_id }, "Key request processed");
         } catch (error) {
           // Mark as failed
-          await supabase
-            .from("key_requests")
-            .update({
-              status: "failed",
-              error_message: error.message,
-              processed_at: new Date().toISOString()
-            })
-            .eq("id", request.id);
+          await db.query(
+            'UPDATE key_requests SET status = $1, error_message = $2, processed_at = $3 WHERE id = $4',
+            ["failed", error.message, new Date().toISOString(), request.id]
+          );
 
           results.push({
             request_id: request.id,
@@ -941,7 +858,7 @@ async function init() {
     }
   });
 
-  // Download device config (RLS-protected via RPC and join)
+  // Download device config
   app.get("/api/device/:deviceId/config", async (req, reply) => {
     try {
       if (!wgManager) {
@@ -950,33 +867,26 @@ async function init() {
 
       const { deviceId } = req.params;
 
-      // Get device config from database (with RLS protection)
-      const { data: configResult, error } = await supabase.rpc(
-        "get_device_config",
-        { p_device_id: deviceId }
+      // Get full config with node details via JOIN (replaces Supabase RPC + nested select)
+      const { rows: [row] } = await db.query(
+        `SELECT dc.*, d.name AS device_name, d.platform AS device_platform,
+                vn.name AS node_name, vn.public_ip AS node_public_ip, vn.port AS node_port, vn.public_key AS node_public_key
+         FROM device_configs dc
+         LEFT JOIN devices d ON dc.device_id = d.id
+         LEFT JOIN vpn_nodes vn ON dc.node_id = vn.id
+         WHERE dc.device_id = $1 AND dc.is_active = true
+         LIMIT 1`,
+        [deviceId]
       );
 
-      if (error || configResult?.error) {
-        return reply.code(404).send({
-          error: configResult?.error || error.message
-        });
-      }
-
-      // Get full config for generating WireGuard file
-      const { data: fullConfig } = await supabase
-        .from("device_configs")
-        .select(`
-          *,
-          devices(name, platform),
-          vpn_nodes(name, public_ip, port, public_key)
-        `)
-        .eq("device_id", deviceId)
-        .eq("is_active", true)
-        .single();
-
-      if (!fullConfig) {
+      if (!row) {
         return reply.code(404).send({ error: "Configuration not found" });
       }
+
+      // Reshape to match nested format
+      const fullConfig = row;
+      fullConfig.devices = { name: row.device_name, platform: row.device_platform };
+      fullConfig.vpn_nodes = { name: row.node_name, public_ip: row.node_public_ip, port: row.node_port, public_key: row.node_public_key };
 
       // Generate WireGuard config file content
       const wgConfig = wgManager.generateWireGuardConfig(fullConfig, fullConfig.vpn_nodes);
@@ -1005,21 +915,27 @@ async function init() {
 
       const { deviceId } = req.params;
 
-      // Get full config from database
-      const { data: fullConfig } = await supabase
-        .from("device_configs")
-        .select(`
-          *,
-          devices(name, platform),
-          vpn_nodes(name, public_ip, port, public_key, region)
-        `)
-        .eq("device_id", deviceId)
-        .eq("is_active", true)
-        .single();
+      // Get full config from database with joins
+      const { rows: [row] } = await db.query(
+        `SELECT dc.*, d.name AS device_name, d.platform AS device_platform,
+                vn.name AS node_name, vn.public_ip AS node_public_ip, vn.port AS node_port,
+                vn.public_key AS node_public_key, vn.region AS node_region
+         FROM device_configs dc
+         LEFT JOIN devices d ON dc.device_id = d.id
+         LEFT JOIN vpn_nodes vn ON dc.node_id = vn.id
+         WHERE dc.device_id = $1 AND dc.is_active = true
+         LIMIT 1`,
+        [deviceId]
+      );
 
-      if (!fullConfig) {
+      if (!row) {
         return reply.code(404).send({ error: "Configuration not found" });
       }
+
+      // Reshape to match nested format
+      const fullConfig = row;
+      fullConfig.devices = { name: row.device_name, platform: row.device_platform };
+      fullConfig.vpn_nodes = { name: row.node_name, public_ip: row.node_public_ip, port: row.node_port, public_key: row.node_public_key, region: row.node_region };
 
       // Generate WireGuard config text
       const wgConfig = wgManager.generateWireGuardConfig(fullConfig, fullConfig.vpn_nodes);
@@ -1053,19 +969,9 @@ async function init() {
   // Public node status for frontend
   app.get("/api/wireguard/nodes", async (req, reply) => {
     try {
-      if (!supabase) {
-        return reply.code(500).send({ error: "Database not available" });
-      }
-
-      const { data: nodes, error } = await supabase
-        .from("vpn_nodes")
-        .select("id, name, region, public_ip, current_clients, max_clients, is_active, is_healthy")
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) {
-        return reply.code(500).send({ error: error.message });
-      }
+      const { rows: nodes } = await db.query(
+        'SELECT id, name, region, public_ip, current_clients, max_clients, is_active, is_healthy FROM vpn_nodes WHERE is_active = true ORDER BY name'
+      );
 
       return reply.send({ nodes: nodes || [] });
 
@@ -1078,19 +984,16 @@ async function init() {
   // Admin endpoint: Manual key generation
   app.post("/api/admin/wireguard/generate-key", async (req, reply) => {
     try {
-      if (!supabase) return reply.code(500).send({ error: "Database not available" });
-
       // Check admin authentication
       const adminEmail = req.headers['x-admin-email'];
       if (!adminEmail) {
         return reply.code(401).send({ error: "Admin authentication required" });
       }
 
-      const { data: isAdmin } = await supabase
-        .from("admin_emails")
-        .select("email")
-        .eq("email", adminEmail)
-        .single();
+      const { rows: [isAdmin] } = await db.query(
+        'SELECT email FROM admin_emails WHERE email = $1 LIMIT 1',
+        [adminEmail]
+      );
 
       if (!isAdmin) {
         return reply.code(403).send({ error: "Admin access required" });
@@ -1124,19 +1027,16 @@ async function init() {
   // Admin endpoint: Device actions (activate, suspend, revoke_keys)
   app.post("/api/admin-device", async (req, reply) => {
     try {
-      if (!supabase) return reply.code(500).send({ error: "Database not available" });
-
       // Check admin authentication
       const adminEmail = req.headers['x-admin-email'];
       if (!adminEmail) {
         return reply.code(401).send({ error: "Admin authentication required" });
       }
 
-      const { data: isAdmin } = await supabase
-        .from("admin_emails")
-        .select("email")
-        .eq("email", adminEmail)
-        .single();
+      const { rows: [isAdmin] } = await db.query(
+        'SELECT email FROM admin_emails WHERE email = $1 LIMIT 1',
+        [adminEmail]
+      );
 
       if (!isAdmin) {
         return reply.code(403).send({ error: "Admin access required" });
@@ -1149,13 +1049,12 @@ async function init() {
       }
 
       // Get device details
-      const { data: device, error: deviceError } = await supabase
-        .from("devices")
-        .select("id, user_id, org_id, is_active")
-        .eq("id", deviceId)
-        .single();
+      const { rows: [device] } = await db.query(
+        'SELECT id, user_id, org_id, is_active FROM devices WHERE id = $1 LIMIT 1',
+        [deviceId]
+      );
 
-      if (deviceError || !device) {
+      if (!device) {
         return reply.code(404).send({ error: "Device not found" });
       }
 
@@ -1166,13 +1065,10 @@ async function init() {
         }
 
         // First check if device already has active config
-        const { data: existingConfig } = await supabase
-          .from("device_configs")
-          .select("id, is_active")
-          .eq("device_id", deviceId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const { rows: [existingConfig] } = await db.query(
+          'SELECT id, is_active FROM device_configs WHERE device_id = $1 ORDER BY created_at DESC LIMIT 1',
+          [deviceId]
+        );
 
         if (existingConfig?.is_active) {
           // Deactivate old config first
@@ -1183,10 +1079,10 @@ async function init() {
         const result = await wgManager.generateDeviceConfig(deviceId, device.user_id);
 
         // Activate the device
-        await supabase
-          .from("devices")
-          .update({ is_active: true, updated_at: new Date().toISOString() })
-          .eq("id", deviceId);
+        await db.query(
+          'UPDATE devices SET is_active = true, updated_at = $1 WHERE id = $2',
+          [new Date().toISOString(), deviceId]
+        );
 
         req.log.info({ deviceId, adminEmail }, "Device activated with new keys");
 
@@ -1200,16 +1096,16 @@ async function init() {
 
       } else if (action === "suspend") {
         // Suspend device access (deactivate but keep configs)
-        await supabase
-          .from("devices")
-          .update({ is_active: false, updated_at: new Date().toISOString() })
-          .eq("id", deviceId);
+        await db.query(
+          'UPDATE devices SET is_active = false, updated_at = $1 WHERE id = $2',
+          [new Date().toISOString(), deviceId]
+        );
 
         // Deactivate all device configs
-        await supabase
-          .from("device_configs")
-          .update({ is_active: false, deactivated_at: new Date().toISOString() })
-          .eq("device_id", deviceId);
+        await db.query(
+          'UPDATE device_configs SET is_active = false, deactivated_at = $1 WHERE device_id = $2',
+          [new Date().toISOString(), deviceId]
+        );
 
         req.log.info({ deviceId, adminEmail }, "Device suspended");
 
@@ -1232,16 +1128,13 @@ async function init() {
         }
 
         // Delete all device configs
-        await supabase
-          .from("device_configs")
-          .delete()
-          .eq("device_id", deviceId);
+        await db.query('DELETE FROM device_configs WHERE device_id = $1', [deviceId]);
 
         // Deactivate device
-        await supabase
-          .from("devices")
-          .update({ is_active: false, updated_at: new Date().toISOString() })
-          .eq("id", deviceId);
+        await db.query(
+          'UPDATE devices SET is_active = false, updated_at = $1 WHERE id = $2',
+          [new Date().toISOString(), deviceId]
+        );
 
         req.log.info({ deviceId, adminEmail }, "Device keys revoked");
 
@@ -1265,25 +1158,22 @@ async function init() {
     try {
       const health = {
         wg_manager: !!wgManager,
-        database: !!supabase,
+        database: !!db,
         timestamp: new Date().toISOString()
       };
 
-      if (wgManager && supabase) {
-        // Get basic stats
-        const { count: totalDevices } = await supabase
-          .from("device_configs")
-          .select("id", { count: "exact" })
-          .eq("is_active", true);
+      if (wgManager && db) {
+        const { rows: [deviceCount] } = await db.query(
+          'SELECT COUNT(*)::int AS count FROM device_configs WHERE is_active = true'
+        );
 
-        const { count: totalNodes } = await supabase
-          .from("vpn_nodes")
-          .select("id", { count: "exact" })
-          .eq("is_active", true);
+        const { rows: [nodeCount] } = await db.query(
+          'SELECT COUNT(*)::int AS count FROM vpn_nodes WHERE is_active = true'
+        );
 
         health.stats = {
-          active_devices: totalDevices || 0,
-          active_nodes: totalNodes || 0
+          active_devices: deviceCount?.count || 0,
+          active_nodes: nodeCount?.count || 0
         };
       }
 
@@ -1298,10 +1188,6 @@ async function init() {
   // SSH diagnostic endpoint - tests SSH connectivity to VPN nodes
   app.get("/api/wireguard/diagnose-ssh", async (req, reply) => {
     try {
-      if (!supabase) {
-        return reply.code(500).send({ error: "Database not available" });
-      }
-
       const sshKeyEnv = process.env.VPN_NODE_SSH_KEY;
       const results = {
         timestamp: new Date().toISOString(),
@@ -1316,14 +1202,9 @@ async function init() {
       };
 
       // Get all active nodes
-      const { data: nodes, error } = await supabase
-        .from("vpn_nodes")
-        .select("id, name, public_ip, ssh_host, ssh_user, ssh_port, ssh_password, management_type, interface_name")
-        .eq("is_active", true);
-
-      if (error) {
-        return reply.code(500).send({ error: error.message });
-      }
+      const { rows: nodes } = await db.query(
+        'SELECT id, name, public_ip, ssh_host, ssh_user, ssh_port, ssh_password, management_type, interface_name FROM vpn_nodes WHERE is_active = true'
+      );
 
       for (const node of nodes || []) {
         const nodeResult = {
@@ -1340,7 +1221,6 @@ async function init() {
         // Test SSH connectivity with a simple command
         if (wgManager && node.management_type === 'ssh') {
           try {
-            // Test with 'echo test' command
             const sshResult = await wgManager.executeSSHCommand(node, 'echo SSH_OK');
             nodeResult.ssh_test = {
               success: true,
@@ -1354,7 +1234,7 @@ async function init() {
               const wgResult = await wgManager.executeSSHCommand(node, wgCmd);
               nodeResult.wg_show_test = {
                 success: true,
-                output: wgResult.substring(0, 500) // Truncate for safety
+                output: wgResult.substring(0, 500)
               };
             } catch (wgErr) {
               nodeResult.wg_show_test = {
@@ -1398,20 +1278,18 @@ async function init() {
   });
 
   // ---- Start ----
-  const port = Number(PORT || 8080);
+  const port = Number(PORT || 3000);
 
-  // Initialize WireGuard manager if available
-  if (wgManager) {
-    try {
-      await wgManager.initialize();
-      app.log.info("🔒 WireGuard manager initialized");
-    } catch (err) {
-      app.log.error({ error: err }, "Failed to initialize WireGuard manager");
-    }
+  // Initialize WireGuard manager
+  try {
+    await wgManager.initialize();
+    app.log.info("WireGuard manager initialized");
+  } catch (err) {
+    app.log.error({ error: err }, "Failed to initialize WireGuard manager");
   }
 
   await app.listen({ port, host: "0.0.0.0" });
-  app.log.info(`✅ API listening on 0.0.0.0:${port}`);
+  app.log.info(`API listening on 0.0.0.0:${port}`);
 }
 
 // Kick off

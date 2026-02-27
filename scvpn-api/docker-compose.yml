@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  sacvpn-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sacvpn
+      POSTGRES_USER: sacvpn
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - sacvpn_pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5438:5432"
+    networks:
+      - sacvpn-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sacvpn"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sacvpn-api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://sacvpn:${DB_PASSWORD}@sacvpn-db:5432/sacvpn
+      PORT: "3000"
+    ports:
+      - "127.0.0.1:8090:3000"
+    depends_on:
+      sacvpn-db:
+        condition: service_healthy
+    networks:
+      - sacvpn-internal
+    volumes:
+      - ./ssh:/app/ssh:ro
+
+networks:
+  sacvpn-internal:
+    driver: bridge
+
+volumes:
+  sacvpn_pgdata:

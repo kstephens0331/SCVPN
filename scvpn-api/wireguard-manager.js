@@ -8,23 +8,17 @@ import { join } from "path";
 import nacl from "tweetnacl";
 
 export class WireGuardManager {
-  constructor(supabase, logger) {
-    this.supabase = supabase;
+  constructor(db, logger) {
+    this.db = db;
     this.logger = logger;
     this.nodes = new Map(); // nodeId -> node config
   }
 
   async initialize() {
     // Load node configurations from database
-    const { data: nodes, error } = await this.supabase
-      .from("vpn_nodes")
-      .select("*")
-      .eq("is_active", true);
-      
-    if (error) {
-      this.logger.error({ error }, "Failed to load VPN nodes");
-      return;
-    }
+    const { rows: nodes } = await this.db.query(
+      'SELECT * FROM vpn_nodes WHERE is_active = true'
+    );
 
     for (const node of nodes || []) {
       this.nodes.set(node.id, {
@@ -33,7 +27,7 @@ export class WireGuardManager {
         isHealthy: false
       });
     }
-    
+
     this.logger.info({ nodeCount: this.nodes.size }, "WireGuard manager initialized");
   }
 
@@ -137,20 +131,19 @@ export class WireGuardManager {
   async getNextClientIP(nodeId) {
     const node = this.nodes.get(nodeId);
     if (!node) throw new Error('Node not found');
-    
+
     // Get existing client IPs for this node
-    const { data: existingDevices } = await this.supabase
-      .from("device_configs")
-      .select("client_ip")
-      .eq("node_id", nodeId)
-      .not("client_ip", "is", null);
-    
+    const { rows: existingDevices } = await this.db.query(
+      'SELECT client_ip FROM device_configs WHERE node_id = $1 AND client_ip IS NOT NULL',
+      [nodeId]
+    );
+
     const usedIPs = new Set((existingDevices || []).map(d => d.client_ip));
-    
+
     // Parse node's client subnet (e.g., "10.8.0.0/24" -> "10.8.0.x")
     const [subnet, cidr] = node.client_subnet.split('/');
     const [a, b, c] = subnet.split('.');
-    
+
     // Find first available IP in range (start from .2, skip .1 which is usually gateway)
     for (let i = 2; i < 254; i++) {
       const ip = `${a}.${b}.${c}.${i}`;
@@ -158,7 +151,7 @@ export class WireGuardManager {
         return ip;
       }
     }
-    
+
     throw new Error('No available client IPs in subnet');
   }
 
@@ -187,13 +180,14 @@ export class WireGuardManager {
         is_active: true
       };
 
-      const { data: config, error } = await this.supabase
-        .from("device_configs")
-        .insert(configData)
-        .select("*")
-        .single();
+      const { rows: [config] } = await this.db.query(
+        `INSERT INTO device_configs (device_id, user_id, node_id, private_key, public_key, client_ip, dns_servers, created_at, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+        [configData.device_id, configData.user_id, configData.node_id, configData.private_key,
+         configData.public_key, configData.client_ip, configData.dns_servers, configData.created_at, configData.is_active]
+      );
 
-      if (error) throw error;
+      if (!config) throw new Error('Failed to insert device config');
 
       // Add peer to WireGuard node
       await this.addPeerToNode(node, {
@@ -203,18 +197,15 @@ export class WireGuardManager {
       });
 
       // Update node client count
-      await this.supabase
-        .from("vpn_nodes")
-        .update({ 
-          current_clients: node.current_clients + 1,
-          last_updated: new Date().toISOString()
-        })
-        .eq("id", node.id);
+      await this.db.query(
+        'UPDATE vpn_nodes SET current_clients = $1, last_updated = $2 WHERE id = $3',
+        [node.current_clients + 1, new Date().toISOString(), node.id]
+      );
 
-      this.logger.info({ 
-        deviceId, 
-        nodeId: node.id, 
-        clientIP 
+      this.logger.info({
+        deviceId,
+        nodeId: node.id,
+        clientIP
       }, "Device config generated");
 
       return {
@@ -253,7 +244,7 @@ export class WireGuardManager {
     return this.executeSSHCommand(node, command);
   }
 
-  // Write SSH key from env var to temp file (Railway has no persistent filesystem)
+  // Write SSH key from env var to temp file
   _ensureSSHKeyFile() {
     if (this._sshKeyPath) return this._sshKeyPath;
     let keyContent = process.env.VPN_NODE_SSH_KEY;
@@ -261,14 +252,12 @@ export class WireGuardManager {
 
     const keyPath = join(tmpdir(), 'vpn_node_key');
 
-    // Railway may store newlines as literal \n — convert to real newlines
+    // May store newlines as literal \n — convert to real newlines
     keyContent = keyContent.replace(/\\n/g, '\n').trim();
 
     // If missing PEM headers, wrap the base64 body in proper OpenSSH format
     if (!keyContent.includes('-----BEGIN')) {
-      // Strip any whitespace/newlines from the base64 body
       const b64 = keyContent.replace(/\s+/g, '');
-      // Wrap at 70 chars per line (OpenSSH standard)
       const lines = b64.match(/.{1,70}/g) || [];
       keyContent = '-----BEGIN OPENSSH PRIVATE KEY-----\n' +
                    lines.join('\n') + '\n' +
@@ -426,39 +415,48 @@ PersistentKeepalive = 25`;
   // Remove device configuration
   async removeDeviceConfig(deviceId) {
     try {
-      // Get device config
-      const { data: config, error: fetchError } = await this.supabase
-        .from("device_configs")
-        .select("*, vpn_nodes(*)")
-        .eq("device_id", deviceId)
-        .single();
+      // Get device config with node details via JOIN
+      const { rows: [row] } = await this.db.query(
+        `SELECT dc.*, vn.id AS node_db_id, vn.name AS node_name, vn.public_ip AS node_public_ip,
+                vn.interface_name AS node_interface_name, vn.ssh_host AS node_ssh_host,
+                vn.ssh_user AS node_ssh_user, vn.ssh_port AS node_ssh_port, vn.ssh_password AS node_ssh_password,
+                vn.management_type AS node_management_type, vn.current_clients AS node_current_clients,
+                vn.max_clients AS node_max_clients
+         FROM device_configs dc
+         LEFT JOIN vpn_nodes vn ON dc.node_id = vn.id
+         WHERE dc.device_id = $1
+         LIMIT 1`,
+        [deviceId]
+      );
 
-      if (fetchError || !config) {
+      if (!row) {
         throw new Error('Device config not found');
       }
 
-      const node = config.vpn_nodes;
+      // Reshape to match nested format
+      const config = row;
+      const node = {
+        id: row.node_db_id, name: row.node_name, public_ip: row.node_public_ip,
+        interface_name: row.node_interface_name, ssh_host: row.node_ssh_host,
+        ssh_user: row.node_ssh_user, ssh_port: row.node_ssh_port, ssh_password: row.node_ssh_password,
+        management_type: row.node_management_type, current_clients: row.node_current_clients,
+        max_clients: row.node_max_clients
+      };
 
       // Remove peer from WireGuard node
       await this.removePeerFromNode(node, config.public_key);
 
       // Deactivate config in database
-      await this.supabase
-        .from("device_configs")
-        .update({ 
-          is_active: false,
-          deactivated_at: new Date().toISOString()
-        })
-        .eq("device_id", deviceId);
+      await this.db.query(
+        'UPDATE device_configs SET is_active = false, deactivated_at = $1 WHERE device_id = $2',
+        [new Date().toISOString(), deviceId]
+      );
 
       // Update node client count
-      await this.supabase
-        .from("vpn_nodes")
-        .update({ 
-          current_clients: Math.max(0, node.current_clients - 1),
-          last_updated: new Date().toISOString()
-        })
-        .eq("id", node.id);
+      await this.db.query(
+        'UPDATE vpn_nodes SET current_clients = $1, last_updated = $2 WHERE id = $3',
+        [Math.max(0, node.current_clients - 1), new Date().toISOString(), node.id]
+      );
 
       this.logger.info({ deviceId }, "Device config removed");
 
@@ -481,19 +479,15 @@ PersistentKeepalive = 25`;
   async performHealthCheck() {
     for (const [nodeId, node] of this.nodes) {
       try {
-        // Simple ping test or more sophisticated check
         const isHealthy = await this.pingNode(node);
-        
+
         node.isHealthy = isHealthy;
         node.lastHealthCheck = new Date().toISOString();
 
-        await this.supabase
-          .from("vpn_nodes")
-          .update({ 
-            is_healthy: isHealthy,
-            last_health_check: node.lastHealthCheck
-          })
-          .eq("id", nodeId);
+        await this.db.query(
+          'UPDATE vpn_nodes SET is_healthy = $1, last_health_check = $2 WHERE id = $3',
+          [isHealthy, node.lastHealthCheck, nodeId]
+        );
 
       } catch (error) {
         this.logger.error({ error, nodeId }, "Health check failed");

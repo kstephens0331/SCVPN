@@ -12,7 +12,7 @@ import {
 } from "../lib/pricing-new.js";
 import FAQComparison from "../components/FAQComparison.jsx";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://scvpn-production.up.railway.app";
+const API_URL = import.meta.env.VITE_API_URL || "https://api.sacvpn.com";
 
 /**
  * Create Stripe Checkout session
