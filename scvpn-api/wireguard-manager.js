@@ -259,8 +259,11 @@ export class WireGuardManager {
     const keyContent = process.env.VPN_NODE_SSH_KEY;
     if (!keyContent) return null;
     const keyPath = join(tmpdir(), 'vpn_node_key');
-    writeFileSync(keyPath, keyContent + '\n', { mode: 0o600 });
+    // Railway may store newlines as literal \n — convert to real newlines
+    const normalized = keyContent.replace(/\\n/g, '\n').trim() + '\n';
+    writeFileSync(keyPath, normalized, { mode: 0o600 });
     this._sshKeyPath = keyPath;
+    this.logger.info({ keyPath, keyLength: normalized.length }, 'SSH key file written');
     return keyPath;
   }
 
@@ -277,6 +280,13 @@ export class WireGuardManager {
       const sshKeyPath = process.env.VPN_NODE_SSH_KEY_PATH || this._ensureSSHKeyFile();
       const globalPassword = process.env.VPN_NODE_SSH_PASSWORD;
       const target = `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}`;
+
+      this.logger.info({
+        node: node.name,
+        hasNodePassword: !!nodePassword,
+        hasSshKeyPath: !!sshKeyPath,
+        hasGlobalPassword: !!globalPassword
+      }, 'SSH auth selection');
 
       let sshCmd;
       if (nodePassword) {
