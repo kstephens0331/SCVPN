@@ -1302,10 +1302,16 @@ async function init() {
         return reply.code(500).send({ error: "Database not available" });
       }
 
+      const sshKeyEnv = process.env.VPN_NODE_SSH_KEY;
       const results = {
         timestamp: new Date().toISOString(),
         ssh_password_configured: !!process.env.VPN_NODE_SSH_PASSWORD,
         ssh_key_path_configured: !!process.env.VPN_NODE_SSH_KEY_PATH,
+        ssh_key_env_configured: !!sshKeyEnv,
+        ssh_key_env_length: sshKeyEnv?.length || 0,
+        ssh_key_env_starts_with: sshKeyEnv?.substring(0, 30) || null,
+        ssh_key_env_has_newlines: sshKeyEnv?.includes('\n') || false,
+        ssh_key_env_has_literal_newlines: sshKeyEnv?.includes('\\n') || false,
         nodes: []
       };
 

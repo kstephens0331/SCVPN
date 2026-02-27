@@ -256,14 +256,33 @@ export class WireGuardManager {
   // Write SSH key from env var to temp file (Railway has no persistent filesystem)
   _ensureSSHKeyFile() {
     if (this._sshKeyPath) return this._sshKeyPath;
-    const keyContent = process.env.VPN_NODE_SSH_KEY;
+    let keyContent = process.env.VPN_NODE_SSH_KEY;
     if (!keyContent) return null;
+
     const keyPath = join(tmpdir(), 'vpn_node_key');
+
+    // Detect format and normalize
+    if (!keyContent.includes('-----BEGIN')) {
+      // Likely base64-encoded — decode it
+      try {
+        keyContent = Buffer.from(keyContent, 'base64').toString('utf8');
+      } catch (e) {
+        this.logger.error({ error: e.message }, 'Failed to base64-decode SSH key');
+      }
+    }
+
     // Railway may store newlines as literal \n — convert to real newlines
-    const normalized = keyContent.replace(/\\n/g, '\n').trim() + '\n';
+    let normalized = keyContent.replace(/\\n/g, '\n').trim() + '\n';
+
+    this.logger.info({
+      keyPath,
+      keyLength: normalized.length,
+      startsWithBegin: normalized.startsWith('-----BEGIN'),
+      lineCount: normalized.split('\n').length
+    }, 'SSH key file written');
+
     writeFileSync(keyPath, normalized, { mode: 0o600 });
     this._sshKeyPath = keyPath;
-    this.logger.info({ keyPath, keyLength: normalized.length }, 'SSH key file written');
     return keyPath;
   }
 
