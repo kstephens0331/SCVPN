@@ -1,0 +1,50 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'tailwind.config.js'
+      - 'postcss.config.js'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_ADMIN_EMAILS: ${{ secrets.VITE_ADMIN_EMAILS }}
+          VITE_API_URL: https://api.sacvpn.com
+        run: npm run build
+
+      - name: Deploy to Texas server
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avz --delete
+          path: dist/
+          remote_path: /home/stephens-code2/docker/caddy/sites/sacvpn-web/
+          remote_host: 98.96.14.4
+          remote_user: stephens-code2
+          remote_key: ${{ secrets.SSH_DEPLOY_KEY }}
