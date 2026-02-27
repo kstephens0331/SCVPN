@@ -269,27 +269,40 @@ export class WireGuardManager {
     return new Promise((resolve, reject) => {
       const SSH_TIMEOUT = 15000; // 15 seconds timeout
 
-      // Use per-node ssh_password from DB, fall back to global env var
-      const password = node.ssh_password || process.env.VPN_NODE_SSH_PASSWORD;
+      // Auth priority:
+      // 1. Per-node ssh_password from DB (node-specific override)
+      // 2. SSH key file (from VPN_NODE_SSH_KEY env var — for hardened servers like Texas)
+      // 3. Global VPN_NODE_SSH_PASSWORD env var (fallback for nodes without per-node password)
+      const nodePassword = node.ssh_password;                                    // per-node only
       const sshKeyPath = process.env.VPN_NODE_SSH_KEY_PATH || this._ensureSSHKeyFile();
+      const globalPassword = process.env.VPN_NODE_SSH_PASSWORD;
       const target = `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}`;
 
       let sshCmd;
-      if (sshKeyPath) {
-        // Key-based auth (always preferred — works on hardened servers)
+      if (nodePassword) {
+        // Per-node password (explicit override in database)
+        sshCmd = [
+          'sshpass', '-p', nodePassword, 'ssh',
+          '-o', 'ConnectTimeout=10',
+          '-o', 'StrictHostKeyChecking=no',
+          '-o', 'UserKnownHostsFile=/dev/null',
+          '-o', 'BatchMode=no',
+          target, command
+        ];
+      } else if (sshKeyPath) {
+        // Key-based auth (for hardened servers with PasswordAuthentication=no)
         sshCmd = [
           'ssh',
           '-o', 'ConnectTimeout=10',
           '-o', 'StrictHostKeyChecking=no',
           '-o', 'UserKnownHostsFile=/dev/null',
-          '-o', 'PasswordAuthentication=no',
           '-i', sshKeyPath,
           target, command
         ];
-      } else if (password) {
-        // Password auth fallback
+      } else if (globalPassword) {
+        // Global password fallback
         sshCmd = [
-          'sshpass', '-p', password, 'ssh',
+          'sshpass', '-p', globalPassword, 'ssh',
           '-o', 'ConnectTimeout=10',
           '-o', 'StrictHostKeyChecking=no',
           '-o', 'UserKnownHostsFile=/dev/null',
