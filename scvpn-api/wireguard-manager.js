@@ -272,28 +272,29 @@ export class WireGuardManager {
       // Use per-node ssh_password from DB, fall back to global env var
       const password = node.ssh_password || process.env.VPN_NODE_SSH_PASSWORD;
       const sshKeyPath = process.env.VPN_NODE_SSH_KEY_PATH || this._ensureSSHKeyFile();
+      const target = `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}`;
 
       let sshCmd;
-      if (!password && sshKeyPath) {
-        // Key-based auth (preferred for hardened servers)
+      if (sshKeyPath) {
+        // Key-based auth (always preferred — works on hardened servers)
         sshCmd = [
           'ssh',
           '-o', 'ConnectTimeout=10',
           '-o', 'StrictHostKeyChecking=no',
           '-o', 'UserKnownHostsFile=/dev/null',
+          '-o', 'PasswordAuthentication=no',
           '-i', sshKeyPath,
-          `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}`,
-          command
+          target, command
         ];
       } else if (password) {
+        // Password auth fallback
         sshCmd = [
           'sshpass', '-p', password, 'ssh',
           '-o', 'ConnectTimeout=10',
           '-o', 'StrictHostKeyChecking=no',
           '-o', 'UserKnownHostsFile=/dev/null',
           '-o', 'BatchMode=no',
-          `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}`,
-          command
+          target, command
         ];
       } else {
         // No auth configured
@@ -302,8 +303,7 @@ export class WireGuardManager {
           '-o', 'ConnectTimeout=10',
           '-o', 'StrictHostKeyChecking=no',
           '-o', 'UserKnownHostsFile=/dev/null',
-          `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}`,
-          command
+          target, command
         ];
       }
 
