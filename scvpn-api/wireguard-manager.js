@@ -250,17 +250,42 @@ export class WireGuardManager {
     return this.executeSSHCommand(node, command);
   }
 
+  // Write SSH key from env var to temp file (Railway has no persistent filesystem)
+  _ensureSSHKeyFile() {
+    if (this._sshKeyPath) return this._sshKeyPath;
+    const keyContent = process.env.VPN_NODE_SSH_KEY;
+    if (!keyContent) return null;
+    const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
+    const keyPath = path.join(os.tmpdir(), 'vpn_node_key');
+    fs.writeFileSync(keyPath, keyContent + '\n', { mode: 0o600 });
+    this._sshKeyPath = keyPath;
+    return keyPath;
+  }
+
   // Execute SSH command on node
   async executeSSHCommand(node, command) {
     return new Promise((resolve, reject) => {
       const SSH_TIMEOUT = 15000; // 15 seconds timeout
 
-      // For now, we'll use sshpass for password authentication
-      // In production, you should set up SSH key authentication
-      const password = process.env.VPN_NODE_SSH_PASSWORD;
+      // Use per-node ssh_password from DB, fall back to global env var
+      const password = node.ssh_password || process.env.VPN_NODE_SSH_PASSWORD;
+      const sshKeyPath = process.env.VPN_NODE_SSH_KEY_PATH || this._ensureSSHKeyFile();
 
       let sshCmd;
-      if (password) {
+      if (!password && sshKeyPath) {
+        // Key-based auth (preferred for hardened servers)
+        sshCmd = [
+          'ssh',
+          '-o', 'ConnectTimeout=10',
+          '-o', 'StrictHostKeyChecking=no',
+          '-o', 'UserKnownHostsFile=/dev/null',
+          '-i', sshKeyPath,
+          `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}`,
+          command
+        ];
+      } else if (password) {
         sshCmd = [
           'sshpass', '-p', password, 'ssh',
           '-o', 'ConnectTimeout=10',
@@ -271,13 +296,12 @@ export class WireGuardManager {
           command
         ];
       } else {
-        // Fallback to key-based auth
+        // No auth configured
         sshCmd = [
           'ssh',
           '-o', 'ConnectTimeout=10',
           '-o', 'StrictHostKeyChecking=no',
           '-o', 'UserKnownHostsFile=/dev/null',
-          '-i', process.env.VPN_NODE_SSH_KEY_PATH || '~/.ssh/vpn_nodes',
           `${node.ssh_user || 'root'}@${node.ssh_host || node.public_ip}`,
           command
         ];

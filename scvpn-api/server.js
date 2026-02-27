@@ -456,23 +456,24 @@ async function init() {
 
       app.log.info({ userId, subId: subscription.id, plan: plan_code, subData }, "[claim] Subscription linked to user");
 
+      // Resolve plan display name (used by both welcome + admin emails)
+      const planNames = {
+        personal: 'Personal',
+        gaming: 'Gaming',
+        business10: 'Business 10',
+        business50: 'Business 50',
+        business100: 'Business 100',
+        business500: 'Business 500',
+        business1k: 'Business 1K',
+        business2500: 'Business 2.5K',
+        business5k: 'Business 5K',
+        business10k: 'Business 10K',
+        enterprise: 'Enterprise Custom'
+      };
+      const planName = planNames[plan_code] || plan_code || 'VPN';
+
       // Send welcome email with download link
       try {
-        const planNames = {
-          personal: 'Personal',
-          gaming: 'Gaming',
-          business10: 'Business 10',
-          business50: 'Business 50',
-          business100: 'Business 100',
-          business500: 'Business 500',
-          business1k: 'Business 1K',
-          business2500: 'Business 2.5K',
-          business5k: 'Business 5K',
-          business10k: 'Business 10K',
-          enterprise: 'Enterprise Custom'
-        };
-        const planName = planNames[plan_code] || plan_code || 'VPN';
-
         await emailService.sendWelcomeEmail({
           userEmail: email,
           userName: email.split('@')[0], // Use email prefix as name
@@ -1087,9 +1088,8 @@ async function init() {
 
       const { data: isAdmin } = await supabase
         .from("admin_emails")
-        .select("is_admin")
+        .select("email")
         .eq("email", adminEmail)
-        .eq("is_admin", true)
         .single();
 
       if (!isAdmin) {
@@ -1134,9 +1134,8 @@ async function init() {
 
       const { data: isAdmin } = await supabase
         .from("admin_emails")
-        .select("is_admin")
+        .select("email")
         .eq("email", adminEmail)
-        .eq("is_admin", true)
         .single();
 
       if (!isAdmin) {
