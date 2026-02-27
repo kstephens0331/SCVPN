@@ -1312,7 +1312,7 @@ async function init() {
       // Get all active nodes
       const { data: nodes, error } = await supabase
         .from("vpn_nodes")
-        .select("id, name, public_ip, ssh_host, ssh_user, ssh_port, management_type, interface_name")
+        .select("id, name, public_ip, ssh_host, ssh_user, ssh_port, ssh_password, management_type, interface_name")
         .eq("is_active", true);
 
       if (error) {
