@@ -92,6 +92,39 @@ export class EmailService {
     return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
   }
 
+  // Send admin notification when a new user signs up
+  async sendAdminNotification({ userEmail, planCode, planName }) {
+    if (!this.sendGridConfigured) {
+      this.logger.warn('Email service not configured - skipping admin notification');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    try {
+      const msg = {
+        to: 'info@stephenscode.dev',
+        from: this.fromEmail,
+        subject: `New SACVPN Signup: ${planName} - ${userEmail}`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #10b981; margin-top: 0;">New SACVPN Subscriber</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">Email</td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${userEmail}</td></tr>
+              <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">Plan</td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${planName} (${planCode})</td></tr>
+              <tr><td style="padding: 8px; font-weight: bold;">Time</td><td style="padding: 8px;">${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })} CT</td></tr>
+            </table>
+          </div>
+        `.trim(),
+      };
+
+      const response = await sgMail.send(msg);
+      this.logger.info({ to: 'info@stephenscode.dev', userEmail }, 'Admin signup notification sent');
+      return { success: true, messageId: response[0].headers['x-message-id'] };
+    } catch (error) {
+      this.logger.error({ error: error.message }, 'Admin notification failed');
+      return { success: false, error: error.message };
+    }
+  }
+
   // Download URLs for desktop app
   getDownloadUrls() {
     return {

@@ -82,8 +82,11 @@ export class WireGuardManager {
   }
 
   // Assign user to best available node
-  // Strategy: VA Primary handles all client connections (Dallas is backend relay only)
-  selectBestNode(userRegion = 'us-east', userLocation = null) {
+  // Strategy: Fill each node to 80% before spilling to next priority
+  // Texas Primary (2.5Gbps) -> VA Secondary -> Dallas Tertiary
+  static OVERFLOW_THRESHOLD = 0.80; // 80% capacity before spilling to next node
+
+  selectBestNode(userRegion = 'us-central', userLocation = null) {
     const availableNodes = Array.from(this.nodes.values())
       .filter(node => node.is_active && node.current_clients < node.max_clients);
 
@@ -91,47 +94,38 @@ export class WireGuardManager {
       throw new Error('No available VPN nodes');
     }
 
-    // Find VA and Dallas nodes
-    const vaPrimary = availableNodes.find(n => n.name === 'SACVPN-VA-Primary' || n.priority === 1);
-    const dallasCentral = availableNodes.find(n => n.name === 'SACVPN-Dallas-Central' || n.priority === 2);
-
-    // STRATEGY: VA Primary handles ALL client connections (Dallas blocked by some ISPs)
-    // Dallas acts as backend relay peered with VA
-    if (vaPrimary && vaPrimary.current_clients < vaPrimary.max_clients) {
-      this.logger.info({
-        node: vaPrimary.name,
-        load: `${vaPrimary.current_clients}/${vaPrimary.max_clients}`,
-        capacity: `${((vaPrimary.current_clients / vaPrimary.max_clients) * 100).toFixed(1)}%`
-      }, "Selected VA Primary for client connection (primary node)");
-      return vaPrimary;
-    }
-
-    // VA is at capacity - use Dallas as fallback (note: may be blocked by some ISPs)
-    if (dallasCentral) {
-      this.logger.warn({
-        node: dallasCentral.name,
-        load: `${dallasCentral.current_clients}/${dallasCentral.max_clients}`,
-        reason: vaPrimary ? 'VA at capacity' : 'VA unavailable'
-      }, "Selected Dallas Central (fallback - may be blocked by some ISPs)");
-      return dallasCentral;
-    }
-
-    // Fallback: Sort by priority, then by load
+    // Sort by priority (lower number = higher priority)
     const sortedNodes = availableNodes.sort((a, b) => {
-      // First by priority (lower number = higher priority)
-      if (a.priority !== b.priority) {
-        return (a.priority || 999) - (b.priority || 999);
-      }
-      // Then by load (lower load = better)
-      return a.current_clients - b.current_clients;
+      return (a.priority || 999) - (b.priority || 999);
     });
 
-    const selectedNode = sortedNodes[0];
+    // Fill each node to 80% before moving to the next
+    let selectedNode = null;
+    for (const node of sortedNodes) {
+      const capacityRatio = node.current_clients / node.max_clients;
+      if (capacityRatio < WireGuardManager.OVERFLOW_THRESHOLD) {
+        selectedNode = node;
+        break;
+      }
+    }
+
+    // All nodes above 80% - pick the one with the most remaining capacity
+    if (!selectedNode) {
+      selectedNode = sortedNodes.reduce((best, node) => {
+        const remaining = node.max_clients - node.current_clients;
+        const bestRemaining = best.max_clients - best.current_clients;
+        return remaining > bestRemaining ? node : best;
+      });
+    }
+
+    const capacityPct = ((selectedNode.current_clients / selectedNode.max_clients) * 100).toFixed(1);
     this.logger.info({
       node: selectedNode.name,
       load: `${selectedNode.current_clients}/${selectedNode.max_clients}`,
-      priority: selectedNode.priority
-    }, "Selected VPN node (fallback)");
+      capacity: `${capacityPct}%`,
+      priority: selectedNode.priority,
+      threshold: `${WireGuardManager.OVERFLOW_THRESHOLD * 100}%`
+    }, `Selected VPN node (${capacityPct}% < ${WireGuardManager.OVERFLOW_THRESHOLD * 100}% threshold)`);
 
     return selectedNode;
   }

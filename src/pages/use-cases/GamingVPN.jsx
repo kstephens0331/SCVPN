@@ -186,8 +186,8 @@ export default function GamingVPN() {
                   <div className="text-sm text-gray-400">Typical Overhead</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-white">50+</div>
-                  <div className="text-sm text-gray-400">Server Locations</div>
+                  <div className="text-3xl font-bold text-white">Zero</div>
+                  <div className="text-sm text-gray-400">Logs Policy</div>
                 </div>
                 <div>
                   <div className="text-3xl font-bold text-white">100%</div>

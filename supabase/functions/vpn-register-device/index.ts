@@ -4,7 +4,8 @@ import nacl from "https://esm.sh/tweetnacl@1.0.3";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-forwarded-for, x-real-ip",
 };
 
 interface RegisterDeviceRequest {
@@ -14,23 +15,100 @@ interface RegisterDeviceRequest {
   preferred_server_id?: string;
 }
 
+// Node coordinates for geo-routing (Haversine distance)
+const NODE_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "SACVPN-Texas-Primary": { lat: 29.76, lng: -95.37 },    // Houston, TX
+  "SACVPN-VA-Secondary": { lat: 39.04, lng: -77.49 },     // Ashburn, VA
+  "SACVPN-Dallas-Central": { lat: 32.78, lng: -96.80 },   // Dallas, TX
+};
+
+// Nodes that should NOT receive client traffic (redirect to Texas)
+const REDIRECT_TO_TEXAS = new Set(["SACVPN-Dallas-Central"]);
+
+// Haversine formula: distance in miles between two lat/lng points
+function haversineDistance(
+  lat1: number, lng1: number, lat2: number, lng2: number
+): number {
+  const R = 3959; // Earth radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Geo-locate client IP using HTTPS API (works from Deno Deploy)
+async function geolocateIP(ip: string): Promise<{ lat: number; lng: number } | null> {
+  // Try ipapi.co (HTTPS, 30k/month free, no key needed)
+  try {
+    const resp = await fetch(`https://ipapi.co/${ip}/json/`, {
+      signal: AbortSignal.timeout(4000),
+      headers: { "User-Agent": "SACVPN/1.0" },
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.latitude && data.longitude) {
+        return { lat: data.latitude, lng: data.longitude };
+      }
+    }
+  } catch { /* first attempt failed */ }
+
+  // Fallback: ip-api.com over HTTPS (pro) or ipinfo.io
+  try {
+    const resp = await fetch(`https://ipinfo.io/${ip}/json?token=`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.loc) {
+        const [lat, lng] = data.loc.split(",").map(Number);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return { lat, lng };
+        }
+      }
+    }
+  } catch { /* geo lookup is best-effort */ }
+
+  return null;
+}
+
+// Select the best node for the client based on geo-location
+// Only considers nodes NOT in the REDIRECT_TO_TEXAS set
+function selectBestNode(
+  nodes: any[],
+  clientLat: number,
+  clientLng: number
+): { node: any; distance: number } {
+  // Filter out nodes that should redirect to Texas
+  const eligibleNodes = nodes.filter(n => !REDIRECT_TO_TEXAS.has(n.name));
+
+  let bestNode = eligibleNodes[0] || nodes[0]; // fallback to first available
+  let minDist = Infinity;
+
+  for (const node of eligibleNodes) {
+    const coords = NODE_COORDINATES[node.name];
+    if (!coords) continue;
+    const dist = haversineDistance(clientLat, clientLng, coords.lat, coords.lng);
+    if (dist < minDist) {
+      minDist = dist;
+      bestNode = node;
+    }
+  }
+
+  return { node: bestNode, distance: Math.round(minDist) };
+}
+
 // Generate WireGuard key pair using Curve25519
 function generateWireGuardKeyPair(): { privateKey: string; publicKey: string } {
-  // Generate random 32-byte private key
   const privateKeyBytes = nacl.randomBytes(32);
-
-  // Clamp the private key (WireGuard requirement)
   privateKeyBytes[0] &= 248;
   privateKeyBytes[31] &= 127;
   privateKeyBytes[31] |= 64;
-
-  // Derive public key using Curve25519
   const publicKeyBytes = nacl.scalarMult.base(privateKeyBytes);
-
-  // Convert to base64
   const privateKey = btoa(String.fromCharCode(...privateKeyBytes));
   const publicKey = btoa(String.fromCharCode(...publicKeyBytes));
-
   return { privateKey, publicKey };
 }
 
@@ -62,12 +140,10 @@ Deno.serve(async (req) => {
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const SUPABASE_SERVICE_ROLE = Deno.env.get("SCVPN_SERVICE_ROLE_JWT")!;
 
-    // Create client with user's JWT for auth check
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Verify user
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) {
       return new Response(
@@ -76,7 +152,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use service role for database operations
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
 
     // Check subscription
@@ -113,7 +188,58 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if device already exists by hardware_id
+    // Get client IP for geo-routing
+    const clientIPRaw =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      req.headers.get("cf-connecting-ip") || "";
+
+    // Geo-locate client (used for both existing and new device routing)
+    const clientGeo = clientIPRaw ? await geolocateIP(clientIPRaw) : null;
+    console.log(`Client IP: ${clientIPRaw}, Geo: ${clientGeo ? `${clientGeo.lat},${clientGeo.lng}` : "failed"}`);
+
+    // Get all available nodes upfront (needed for both paths)
+    const { data: allNodes } = await supabase
+      .from("vpn_nodes")
+      .select("*")
+      .eq("is_active", true)
+      .eq("is_healthy", true)
+      .order("priority", { ascending: true });
+
+    if (!allNodes?.length) {
+      return new Response(
+        JSON.stringify({ error: "No VPN servers available. Please try again later." }),
+        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const availableNodes = allNodes.filter(n => n.current_clients < n.max_clients);
+    if (!availableNodes.length) {
+      return new Response(
+        JSON.stringify({ error: "All servers are at capacity. Please try again later." }),
+        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Determine the optimal node for this client
+    let optimalNode: any;
+    let routingReason = "";
+
+    if (clientGeo) {
+      const result = selectBestNode(availableNodes, clientGeo.lat, clientGeo.lng);
+      optimalNode = result.node;
+      routingReason = `geo-routed (${result.distance}mi to ${optimalNode.name})`;
+    } else {
+      // Fallback: use highest priority node that isn't in the redirect set
+      optimalNode = availableNodes.find(n => !REDIRECT_TO_TEXAS.has(n.name)) || availableNodes[0];
+      routingReason = `priority-fallback to ${optimalNode.name}`;
+    }
+
+    console.log(`Optimal node: ${optimalNode.name} (${routingReason})`);
+
+    // =========================================================================
+    // EXISTING DEVICE: Check if device needs to be moved to a better node
+    // =========================================================================
     if (hardware_id) {
       const { data: existingDevice } = await supabase
         .from("devices")
@@ -124,67 +250,150 @@ Deno.serve(async (req) => {
         .single();
 
       if (existingDevice) {
-        // Return existing config if device is already registered
-        if (existingDevice.device_configs?.length > 0) {
-          const config = existingDevice.device_configs[0];
-          const { data: node } = await supabase
+        const activeConfig = existingDevice.device_configs?.find((c: any) => c.is_active);
+
+        if (activeConfig) {
+          const { data: currentNode } = await supabase
             .from("vpn_nodes")
             .select("*")
-            .eq("id", config.node_id)
+            .eq("id", activeConfig.node_id)
             .single();
 
+          // Check if device needs to be moved:
+          // 1. On Dallas → always move to Texas
+          // 2. On a node that isn't the optimal one → move
+          const needsMove =
+            (currentNode && REDIRECT_TO_TEXAS.has(currentNode.name)) ||
+            (currentNode && optimalNode && currentNode.id !== optimalNode.id);
+
+          if (needsMove && optimalNode.current_clients < optimalNode.max_clients) {
+            console.log(`Moving device ${existingDevice.id}: ${currentNode?.name} → ${optimalNode.name} (${routingReason})`);
+
+            // Deactivate old config
+            await supabase
+              .from("device_configs")
+              .update({ is_active: false, deactivated_at: new Date().toISOString() })
+              .eq("id", activeConfig.id);
+
+            // Decrement old node
+            if (currentNode) {
+              await supabase
+                .from("vpn_nodes")
+                .update({ current_clients: Math.max(0, currentNode.current_clients - 1) })
+                .eq("id", currentNode.id);
+            }
+
+            // Generate new keys for the optimal node
+            const { privateKey: newPrivKey, publicKey: newPubKey } = generateWireGuardKeyPair();
+            const newClientIP = await getNextClientIP(supabase, optimalNode.id, optimalNode.client_subnet);
+
+            const { data: newConfig } = await supabase
+              .from("device_configs")
+              .insert({
+                device_id: existingDevice.id,
+                user_id: user.id,
+                node_id: optimalNode.id,
+                private_key: newPrivKey,
+                public_key: newPubKey,
+                client_ip: newClientIP,
+                dns_servers: optimalNode.dns_servers || "1.1.1.1,8.8.8.8",
+                is_active: true,
+                created_at: new Date().toISOString(),
+              })
+              .select()
+              .single();
+
+            // Increment new node
+            await supabase
+              .from("vpn_nodes")
+              .update({ current_clients: optimalNode.current_clients + 1 })
+              .eq("id", optimalNode.id);
+
+            if (newConfig) {
+              return new Response(
+                JSON.stringify({
+                  success: true,
+                  message: `Optimized: moved to ${optimalNode.name}`,
+                  device_id: existingDevice.id,
+                  routing: routingReason,
+                  server: { id: optimalNode.id, name: optimalNode.name, region: optimalNode.region, city: optimalNode.city },
+                  config: generateWireGuardConfigFile(newConfig, optimalNode),
+                }),
+                { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+              );
+            }
+          }
+
+          // Already on the optimal node — return existing config
           return new Response(
             JSON.stringify({
               success: true,
               message: "Device already registered",
               device_id: existingDevice.id,
-              config: generateWireGuardConfigFile(config, node)
+              routing: `already on optimal node (${currentNode?.name})`,
+              config: generateWireGuardConfigFile(activeConfig, currentNode)
             }),
             { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
           );
         }
+
+        // Device exists but no active config — fall through to create one below
+        // We'll reuse the existing device record
+        const { privateKey, publicKey } = generateWireGuardKeyPair();
+        const clientIP = await getNextClientIP(supabase, optimalNode.id, optimalNode.client_subnet);
+
+        const { data: config, error: configError } = await supabase
+          .from("device_configs")
+          .insert({
+            device_id: existingDevice.id,
+            user_id: user.id,
+            node_id: optimalNode.id,
+            private_key: privateKey,
+            public_key: publicKey,
+            client_ip: clientIP,
+            dns_servers: optimalNode.dns_servers || "1.1.1.1,8.8.8.8",
+            is_active: true,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (configError) {
+          return new Response(
+            JSON.stringify({ error: "Failed to generate VPN configuration" }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+
+        await supabase
+          .from("vpn_nodes")
+          .update({ current_clients: optimalNode.current_clients + 1 })
+          .eq("id", optimalNode.id);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: `Config created on ${optimalNode.name}`,
+            device_id: existingDevice.id,
+            routing: routingReason,
+            server: { id: optimalNode.id, name: optimalNode.name, region: optimalNode.region, city: optimalNode.city },
+            config: generateWireGuardConfigFile(config, optimalNode),
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
       }
     }
 
-    // Select best available server
-    let node;
+    // =========================================================================
+    // NEW DEVICE: Register and assign to optimal node
+    // =========================================================================
+
+    // Override with preferred server if specified and available
     if (preferred_server_id) {
-      const { data: preferredNode } = await supabase
-        .from("vpn_nodes")
-        .select("*")
-        .eq("id", preferred_server_id)
-        .eq("is_active", true)
-        .single();
-
-      if (preferredNode && preferredNode.current_clients < preferredNode.max_clients) {
-        node = preferredNode;
-      }
-    }
-
-    if (!node) {
-      // Get best available node by priority and load
-      const { data: nodes, error: nodesError } = await supabase
-        .from("vpn_nodes")
-        .select("*")
-        .eq("is_active", true)
-        .eq("is_healthy", true)
-        .order("priority", { ascending: true })
-        .order("current_clients", { ascending: true });
-
-      if (nodesError || !nodes?.length) {
-        return new Response(
-          JSON.stringify({ error: "No VPN servers available. Please try again later." }),
-          { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-      }
-
-      // Find first node with capacity
-      node = nodes.find(n => n.current_clients < n.max_clients);
-      if (!node) {
-        return new Response(
-          JSON.stringify({ error: "All servers are at capacity. Please try again later." }),
-          { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
+      const preferred = availableNodes.find(n => n.id === preferred_server_id);
+      if (preferred && !REDIRECT_TO_TEXAS.has(preferred.name)) {
+        optimalNode = preferred;
+        routingReason = `user-preferred: ${preferred.name}`;
       }
     }
 
@@ -212,9 +421,7 @@ Deno.serve(async (req) => {
 
     // Generate WireGuard keys
     const { privateKey, publicKey } = generateWireGuardKeyPair();
-
-    // Get next available client IP
-    const clientIP = await getNextClientIP(supabase, node.id, node.client_subnet);
+    const clientIP = await getNextClientIP(supabase, optimalNode.id, optimalNode.client_subnet);
 
     // Create device config
     const { data: config, error: configError } = await supabase
@@ -222,11 +429,11 @@ Deno.serve(async (req) => {
       .insert({
         device_id: device.id,
         user_id: user.id,
-        node_id: node.id,
+        node_id: optimalNode.id,
         private_key: privateKey,
         public_key: publicKey,
         client_ip: clientIP,
-        dns_servers: node.dns_servers || "1.1.1.1,8.8.8.8",
+        dns_servers: optimalNode.dns_servers || "1.1.1.1,8.8.8.8",
         is_active: true,
         created_at: new Date().toISOString()
       })
@@ -235,7 +442,6 @@ Deno.serve(async (req) => {
 
     if (configError) {
       console.error("Error creating config:", configError);
-      // Rollback device creation
       await supabase.from("devices").delete().eq("id", device.id);
       return new Response(
         JSON.stringify({ error: "Failed to generate VPN configuration" }),
@@ -247,24 +453,24 @@ Deno.serve(async (req) => {
     await supabase
       .from("vpn_nodes")
       .update({
-        current_clients: node.current_clients + 1,
+        current_clients: optimalNode.current_clients + 1,
         last_updated: new Date().toISOString()
       })
-      .eq("id", node.id);
+      .eq("id", optimalNode.id);
 
-    // Generate WireGuard config file content
-    const wgConfig = generateWireGuardConfigFile(config, node);
+    const wgConfig = generateWireGuardConfigFile(config, optimalNode);
 
     return new Response(
       JSON.stringify({
         success: true,
         message: "Device registered successfully",
         device_id: device.id,
+        routing: routingReason,
         server: {
-          id: node.id,
-          name: node.name,
-          region: node.region,
-          city: node.city
+          id: optimalNode.id,
+          name: optimalNode.name,
+          region: optimalNode.region,
+          city: optimalNode.city
         },
         config: wgConfig
       }),
@@ -299,7 +505,6 @@ PersistentKeepalive = 25`;
 
 // Get next available client IP in subnet
 async function getNextClientIP(supabase: any, nodeId: string, clientSubnet: string): Promise<string> {
-  // Get existing IPs for this node
   const { data: existingConfigs } = await supabase
     .from("device_configs")
     .select("client_ip")
@@ -307,13 +512,9 @@ async function getNextClientIP(supabase: any, nodeId: string, clientSubnet: stri
     .eq("is_active", true);
 
   const usedIPs = new Set((existingConfigs || []).map((c: any) => c.client_ip));
-
-  // Parse subnet (e.g., "10.8.0.0/24")
   const [subnet] = clientSubnet.split("/");
-  const parts = subnet.split(".");
-  const [a, b, c] = parts;
+  const [a, b, c] = subnet.split(".");
 
-  // Find first available IP (skip .1 which is gateway)
   for (let i = 2; i < 254; i++) {
     const ip = `${a}.${b}.${c}.${i}`;
     if (!usedIPs.has(ip)) {

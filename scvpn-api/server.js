@@ -485,6 +485,18 @@ async function init() {
         app.log.error({ emailErr }, "[claim] Failed to send welcome email");
       }
 
+      // Send admin notification about new signup
+      try {
+        await emailService.sendAdminNotification({
+          userEmail: email,
+          planCode: plan_code,
+          planName: planName
+        });
+        app.log.info({ email, plan: plan_code }, "[claim] Admin notification sent");
+      } catch (notifyErr) {
+        app.log.error({ notifyErr }, "[claim] Failed to send admin notification");
+      }
+
       return reply.send({ ok: true, subscription_id: subscription.id });
     } catch (err) {
       app.log.error({ err }, "[claim] error");

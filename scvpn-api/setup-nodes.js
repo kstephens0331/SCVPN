@@ -115,8 +115,9 @@ async function setupNode(config) {
 
 // Generate WireGuard server config - OPTIMIZED FOR PERFORMANCE
 function generateServerConfig(node, serverPrivateKey) {
-  const isPrimary = node.name.includes('Primary');
-  const networkInterface = isPrimary ? 'ens3' : 'eth0'; // Common cloud interfaces
+  const isTexas = node.name.includes('Texas');
+  const isVA = node.name.includes('VA');
+  const networkInterface = isTexas ? 'enx002427896b51' : isVA ? 'ens3' : 'eth0';
   
   return `# WireGuard Server Config for ${node.name}
 # Location: ${node.location}
@@ -160,35 +161,52 @@ async function main() {
   // Your actual VPN server configurations - OPTIMIZED FOR PERFORMANCE
   const nodeConfigs = [
     {
-      name: "SACVPN-VA-Primary",
-      region: "us-east", 
+      name: "SACVPN-Texas-Primary",
+      region: "us-central",
+      public_ip: "98.96.14.4",
+      port: 51821,
+      interface_name: "wg1",
+      client_subnet: "10.72.0.0/24",
+      dns_servers: "1.1.1.1,1.0.0.1",
+      max_clients: 2000,
+      current_clients: 0,
+      management_type: "ssh",
+      ssh_user: "stephens-code2",
+      ssh_host: "98.96.14.4",
+      priority: 1, // PRIMARY NODE - 2.5Gbps, central location
+      performance_tier: "premium",
+      location: "Texas, USA"
+    },
+    {
+      name: "SACVPN-VA-Secondary",
+      region: "us-east",
       public_ip: "135.148.121.237",
       port: 51820,
       client_subnet: "10.8.0.0/24",
-      dns_servers: "1.1.1.1,1.0.0.1", // Cloudflare DNS for speed
-      max_clients: 2000, // Higher capacity for primary
+      dns_servers: "1.1.1.1,1.0.0.1",
+      max_clients: 2000,
       current_clients: 0,
-      management_type: "ssh", 
+      management_type: "ssh",
       ssh_user: "ubuntu",
       ssh_host: "135.148.121.237",
-      priority: 1, // PRIMARY NODE - lowest latency
-      performance_tier: "premium", // High-performance routing
+      priority: 2, // SECONDARY NODE - east coast coverage
+      performance_tier: "premium",
       location: "Virginia, USA"
     },
     {
       name: "SACVPN-Dallas-Central",
       region: "us-central",
-      public_ip: "45.79.8.145", 
+      public_ip: "45.79.8.145",
       port: 51820,
       client_subnet: "10.9.0.0/24",
-      dns_servers: "1.1.1.1,1.0.0.1", // Cloudflare DNS for speed
-      max_clients: 1000, // Secondary capacity
+      dns_servers: "1.1.1.1,1.0.0.1",
+      max_clients: 1000,
       current_clients: 0,
       management_type: "ssh",
-      ssh_user: "root", 
+      ssh_user: "root",
       ssh_host: "45.79.8.145",
-      priority: 2, // SECONDARY NODE - backup/overflow
-      performance_tier: "standard", // Standard routing
+      priority: 3, // TERTIARY NODE - overflow
+      performance_tier: "standard",
       location: "Dallas, USA"
     }
   ];

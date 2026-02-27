@@ -425,7 +425,7 @@ export default function Home() {
           >
             {[
               { value: "50K+", label: "Active Users" },
-              { value: "50+", label: "Server Locations" },
+              { value: "Zero", label: "Logs Policy" },
               { value: "99.9%", label: "Uptime" },
               { value: "5 Gbps", label: "Server Speed" },
             ].map((stat, index) => (
