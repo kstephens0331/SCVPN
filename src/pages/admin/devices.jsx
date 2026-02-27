@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react"
-import { supabase } from "../../lib/supabase"
+import { apiJson, apiFetch } from "../../lib/api"
 
-// NOTE: call Edge Function via full Supabase URL (no proxy needed)
 async function adminAction(action, deviceId){
-  const { data: { user } } = await supabase.auth.getUser()
-  const url = `${import.meta.env.VITE_API_URL}/api/admin-device`
-  const res = await fetch(url, {
+  const res = await apiFetch("/api/admin-device", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-admin-email": user.email },
     body: JSON.stringify({ action, deviceId })
   })
   if(!res.ok) throw new Error("Action failed")
@@ -21,29 +17,37 @@ export default function Devices(){
   const load = async () => {
     setLoading(true);
     setError(null);
+    try {
+      const data = await apiJson("/api/admin/telemetry");
+      // The telemetry endpoint returns { telemetry, devices, nodes }
+      // Reconstruct device rows from telemetry data + devices map
+      const deviceMap = data.devices || {};
+      const telemetry = data.telemetry || [];
 
-    // Query the view that joins devices with auth.users
-    const { data, error: queryError } = await supabase
-      .from("devices_with_users")
-      .select("id, name, platform, is_active, user_id, org_id, created_at, user_email, org_name")
-      .order("created_at", { ascending: false });
-
-    if (queryError) {
-      console.error("[Devices] Error:", queryError);
-      setError(queryError.message);
-
-      // Fallback to direct devices query if view doesn't exist
-      const { data: fallbackData } = await supabase
-        .from("devices")
-        .select("id, name, platform, is_active, user_id, org_id, created_at")
-        .order("created_at", { ascending: false });
-
-      setRows(fallbackData || []);
-    } else {
-      console.log("[Devices] Loaded", data?.length || 0, "devices");
-      setRows(data || []);
+      // Get unique device info - combine telemetry and device info
+      const deviceRows = [];
+      const seen = new Set();
+      for (const t of telemetry) {
+        if (!seen.has(t.device_id)) {
+          seen.add(t.device_id);
+          const dev = deviceMap[t.device_id] || {};
+          deviceRows.push({
+            id: t.device_id,
+            name: dev.name || t.device_name || "Unknown",
+            platform: dev.platform || t.platform || "\u2014",
+            is_active: t.is_connected ?? true,
+            user_id: t.user_id,
+            user_email: t.user_email || null,
+            org_name: null,
+            created_at: null,
+          });
+        }
+      }
+      setRows(deviceRows);
+    } catch (e) {
+      setError(e.message);
+      setRows([]);
     }
-
     setLoading(false);
   };
 

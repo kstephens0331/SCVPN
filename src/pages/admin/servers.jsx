@@ -1,6 +1,6 @@
 ﻿// src/pages/admin/servers.jsx
 import { useEffect, useState } from "react"
-import { supabase } from "../../lib/supabase"
+import { apiJson } from "../../lib/api"
 
 function copy(text){ navigator.clipboard?.writeText(text) }
 
@@ -9,28 +9,16 @@ export default function Servers(){
   const [metrics, setMetrics] = useState({}) // host_id -> latest snapshot
 
   useEffect(()=>{
-    // Hosts
-    supabase.from("vps_hosts")
-      .select("id,name,ip,ssh_user,ssh_port")
-      .then(({data, error})=> {
-        console.log("[Servers] VPS hosts data:", data, "error:", error);
-        setHosts(data||[]);
-      })
-
-    // Latest metrics (last 5 minutes)
-    supabase.from("vps_metrics")
-      .select("host_id,ts,cpu,mem_used,mem_total,disk_used,disk_total,load1,load5,load15")
-      .gte("ts", new Date(Date.now()-5*60*1000).toISOString())
-      .then(({data, error})=>{
-        console.log("[Servers] VPS metrics data:", data, "error:", error);
-        const byHost = {}
-        for(const r of (data||[])){
-          if(!byHost[r.host_id] || new Date(r.ts) > new Date(byHost[r.host_id].ts)){
-            byHost[r.host_id] = r
-          }
-        }
-        setMetrics(byHost)
-      })
+    async function load() {
+      try {
+        const data = await apiJson("/api/admin/servers");
+        setHosts(data.hosts || []);
+        setMetrics(data.metrics || {});
+      } catch (e) {
+        console.error("Failed to load servers:", e);
+      }
+    }
+    load();
   },[])
 
   return (

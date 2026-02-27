@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { apiJson } from "../../lib/api";
 
 const PLATFORMS = ["ios","android","macos","windows","linux","router","other"];
 
@@ -10,20 +10,31 @@ export default function Personal(){
   const [err, setErr] = useState("");
 
   async function load(){
-    const { data, error } = await supabase.from("devices").select("id,name,platform,is_active").order("created_at",{ascending:false});
-    if (error) setErr(error.message); else setRows(data||[]);
+    try {
+      const data = await apiJson("/api/user/devices");
+      setRows(data.devices || []);
+    } catch (e) {
+      setErr(e.message);
+    }
   }
   useEffect(()=>{ load(); },[]);
 
   async function addDevice(){
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("devices").insert({ user_id: user.id, name, platform, is_active: true });
-    if (error) setErr(error.message); else { setName(""); setPlatform("android"); load(); }
+    try {
+      await apiJson("/api/user/devices", { method: "POST", body: JSON.stringify({ name, platform }) });
+      setName(""); setPlatform("android"); load();
+    } catch (e) {
+      setErr(e.message);
+    }
   }
 
   async function toggle(id, isActive){
-    const { error } = await supabase.from("devices").update({ is_active: !isActive }).eq("id", id);
-    if (error) setErr(error.message); else load();
+    try {
+      await apiJson(`/api/user/devices/${id}`, { method: "PUT", body: JSON.stringify({ is_active: !isActive }) });
+    } catch (e) {
+      setErr(e.message);
+    }
+    load();
   }
 
   return (

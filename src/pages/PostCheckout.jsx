@@ -1,4 +1,4 @@
-﻿// src/pages/PostCheckout.jsx
+// src/pages/PostCheckout.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -10,16 +10,14 @@ export default function PostCheckout() {
 
   const [loading, setLoading]   = useState(true);
   const [email, setEmail]       = useState("");
-  const [plan, setPlan]         = useState("");          // e.g. "personal", "gaming", "business10"
-  const [atype, setAtype]       = useState("personal");  // "personal" | "business"
+  const [plan, setPlan]         = useState("");
+  const [atype, setAtype]       = useState("personal");
   const [qty, setQty]           = useState(1);
   const [password, setPassword] = useState("");
 
-  // ✅ define query params first, then use them
- const qs = new URLSearchParams(loc.search);
- const sessionId = qs.get("sid") || qs.get("session_id");
+  const qs = new URLSearchParams(loc.search);
+  const sessionId = qs.get("sid") || qs.get("session_id");
 
-  // Map plan code → display name (from PLANS)
   const planName =
     plan === "personal"    ? PLANS.personal.name :
     plan === "gaming"      ? PLANS.gaming.name :
@@ -59,12 +57,8 @@ export default function PostCheckout() {
   e.preventDefault();
   if (!email || !password) { alert("Please enter a password."); return; }
 
-  // Try sign up
-  const { error: signUpError } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
-  });
+  // Use our auth client for signup (signUp mimics Supabase interface)
+  const { error: signUpError } = await supabase.auth.signUp({ email, password });
 
   if (signUpError) {
     // If account exists, sign in instead
@@ -78,23 +72,28 @@ export default function PostCheckout() {
     }
   }
 
- const api = import.meta.env.VITE_API_URL || "https://api.sacvpn.com";
-const claimRes = await fetch(`${api}/api/checkout/claim`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    session_id: sessionId,
-    email,
-    plan_code: plan,        // your state variable from verify
-    account_type: atype,    // "personal" | "business"
-    quantity: qty
-  }),
-});
-const claimOut = await claimRes.json().catch(() => ({}));
-if (!claimRes.ok) {
-  alert(claimOut.error || `Claim failed (status ${claimRes.status})`);
-  return;
-}
+  // Get the session to include auth header in claim
+  const { data: { session } } = await supabase.auth.getSession();
+  const api = import.meta.env.VITE_API_URL || "https://api.sacvpn.com";
+  const claimRes = await fetch(`${api}/api/checkout/claim`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: JSON.stringify({
+      session_id: sessionId,
+      email,
+      plan_code: plan,
+      account_type: atype,
+      quantity: qty
+    }),
+  });
+  const claimOut = await claimRes.json().catch(() => ({}));
+  if (!claimRes.ok) {
+    alert(claimOut.error || `Claim failed (status ${claimRes.status})`);
+    return;
+  }
 
   nav(atype === "business" ? "/app/business/devices" : "/app/personal/devices");
 };
@@ -115,7 +114,7 @@ if (!claimRes.ok) {
           <input
             value={email}
             onChange={(e)=>setEmail(e.target.value)}
-            readOnly={!!email}                         // will be read-only if Stripe provided it
+            readOnly={!!email}
             className="w-full border rounded px-3 py-2 bg-gray-100"
           />
         </div>

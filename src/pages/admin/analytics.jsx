@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { supabase } from "../../lib/supabase"
+import { apiJson } from "../../lib/api"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts"
 
 function centsToUSD(c){ return (Number(c||0)/100).toLocaleString(undefined,{style:"currency",currency:"USD"}) }
@@ -40,57 +40,37 @@ export default function Analytics(){
 
   useEffect(()=>{
     async function load(){
-      const rpc = (fn, args) => supabase.rpc(fn, args).then(r=>r.data ?? 0)
+      try {
+        const data = await apiJson("/api/admin/analytics");
 
-      const [
-        revenueToday, revenue7d, revenue30d, revenue60d,
-        revenueQ, revenue6m, revenue1y, revenue2y,
-        newToday, new7d, new30d, new60d,
-        canc7d, canc30d,
-        mrr, arr, arpu30d
-      ] = await Promise.all([
-        rpc("revenue_window",{ days: 1 }),
-        rpc("revenue_window",{ days: 7 }),
-        rpc("revenue_window",{ days: 30 }),
-        rpc("revenue_window",{ days: 60 }),
-        rpc("revenue_window",{ days: 90 }),
-        rpc("revenue_window",{ days: 182 }),
-        rpc("revenue_window",{ days: 365 }),
-        rpc("revenue_window",{ days: 730 }),
-        rpc("new_subscriptions_window",{ days: 1 }),
-        rpc("new_subscriptions_window",{ days: 7 }),
-        rpc("new_subscriptions_window",{ days: 30 }),
-        rpc("new_subscriptions_window",{ days: 60 }),
-        rpc("cancels_window",{ days: 7 }),
-        rpc("cancels_window",{ days: 30 }),
-        rpc("mrr_total_cents"),
-        rpc("arr_total_cents"),
-        rpc("arpu_cents",{ days: 30 }),
-      ])
-
-      const since = new Date(Date.now() - 60*24*60*60*1000).toISOString().slice(0,10)
-      const [{ data: revDaily }, { data: subsDaily }] = await Promise.all([
-        supabase.from("revenue_daily_last_730").select("day,amount_cents").gte("day", since),
-        supabase.from("subscriptions_daily_last_730").select("day,new_subs,cancels").gte("day", since)
-      ])
-
-      const { data: rbp } = await supabase.from("revenue_by_plan_last_12m").select("*")
-      const { data: cohorts } = await supabase.from("cohort_retention_monthly").select("*")
-      const { data: churnRows } = await supabase.from("churn_monthly_last_12m").select("*")
-      const { data: funnelRows } = await supabase.from("funnel_last_60d").select("*")
-
-      setKpi({
-        revenueToday, revenue7d, revenue30d, revenue60d,
-        revenueQ, revenue6m, revenue1y, revenue2y,
-        newToday, new7d, new30d, new60d, canc7d, canc30d,
-        mrr, arr, arpu30d
-      })
-      setRevSeries((revDaily||[]).map(r=>({ day: new Date(r.day).toLocaleDateString(), revenue: r.amount_cents })))
-      setSubsSeries((subsDaily||[]).map(r=>({ day: new Date(r.day).toLocaleDateString(), new_subs: r.new_subs, cancels: r.cancels })))
-      setRevByPlan(rbp||[])
-      setCohortRows(cohorts||[])
-      setChurn((churnRows||[]).map(r=>({ month: new Date(r.month_start).toLocaleDateString(undefined,{month:'short',year:'2-digit'}), churn: Number(r.churn_pct) })))
-      setFunnel((funnelRows||[]).map(r=>({ day: new Date(r.day).toLocaleDateString(), visits:r.visits, signups:r.signups, paid:r.first_paid })))
+        setKpi({
+          revenueToday: data.revenueToday || 0,
+          revenue7d: data.revenue7d || 0,
+          revenue30d: data.revenue30d || 0,
+          revenue60d: data.revenue60d || 0,
+          revenueQ: data.revenueQ || 0,
+          revenue6m: data.revenue6m || 0,
+          revenue1y: data.revenue1y || 0,
+          revenue2y: data.revenue2y || 0,
+          newToday: data.newToday || 0,
+          new7d: data.new7d || 0,
+          new30d: data.new30d || 0,
+          new60d: data.new60d || 0,
+          canc7d: data.canc7d || 0,
+          canc30d: data.canc30d || 0,
+          mrr: data.mrr || 0,
+          arr: data.arr || 0,
+          arpu30d: data.arpu30d || 0,
+        });
+        setRevSeries(data.revSeries || []);
+        setSubsSeries(data.subsSeries || []);
+        setRevByPlan(data.revByPlan || []);
+        setCohortRows(data.cohortRows || []);
+        setChurn(data.churn || []);
+        setFunnel(data.funnel || []);
+      } catch (e) {
+        console.error("Failed to load analytics:", e);
+      }
     }
     load()
   },[])
@@ -238,7 +218,7 @@ export default function Analytics(){
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-xs text-lime-400/80 mt-2">“Visits” will show once you insert rows into <code>web_traffic_daily</code>.</p>
+        <p className="text-xs text-lime-400/80 mt-2">ï¿½Visitsï¿½ will show once you insert rows into <code>web_traffic_daily</code>.</p>
       </section>
 
       {/* Cohort retention heatmap */}

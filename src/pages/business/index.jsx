@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useCallback } from "react";
-import { supabase } from "../../lib/supabase";
+import { apiJson } from "../../lib/api";
 
 const PLATFORMS = ["ios","android","macos","windows","linux","router","other"];
 
@@ -12,29 +12,35 @@ export default function Business(){
   const [err, setErr] = useState("");
 
   useEffect(()=>{
-    supabase.from("org_members").select("organizations!inner(id,name)")
-      .then(({data,error})=>{
-        if (error) { setErr(error.message); return; }
-        const os = (data||[]).map(m=>m.organizations);
+    apiJson("/api/user/organizations")
+      .then((data)=>{
+        const os = data.organizations || [];
         setOrgs(os); if (os[0]) setOrgId(os[0].id);
-      });
+      })
+      .catch((e)=>{ setErr(e.message); });
   },[]);
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.from("devices").select("id,name,platform,is_active").eq("org_id", orgId).order("created_at",{ascending:false});
-    if (error) setErr(error.message); else setRows(data||[]);
+    try {
+      const data = await apiJson(`/api/user/org/${orgId}/devices`);
+      setRows(data.devices || []);
+    } catch (e) { setErr(e.message); }
   }, [orgId]);
 
   useEffect(()=>{ if (orgId) load(); },[orgId, load]);
 
   async function addDevice(){
-    const { error } = await supabase.from("devices").insert({ org_id: orgId, name, platform, is_active: true });
-    if (error) setErr(error.message); else { setName(""); setPlatform("linux"); load(); }
+    try {
+      await apiJson("/api/user/devices", { method: "POST", body: JSON.stringify({ org_id: orgId, name, platform }) });
+      setName(""); setPlatform("linux"); load();
+    } catch (e) { setErr(e.message); }
   }
 
   async function toggle(id, isActive){
-    const { error } = await supabase.from("devices").update({ is_active: !isActive }).eq("id", id);
-    if (error) setErr(error.message); else load();
+    try {
+      await apiJson(`/api/user/devices/${id}`, { method: "PUT", body: JSON.stringify({ is_active: !isActive }) });
+      load();
+    } catch (e) { setErr(e.message); }
   }
 
   return (

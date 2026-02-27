@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { apiJson, apiFetch } from "../../lib/api";
 import {
   CreditCard,
   Receipt,
@@ -17,8 +17,6 @@ import {
   DollarSign,
   FileText,
 } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || "";
 
 const STATUS_STYLES = {
   active: { bg: "bg-green-500/10", border: "border-green-500/20", text: "text-green-400", icon: CheckCircle },
@@ -39,23 +37,11 @@ export default function PersonalBilling() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        const sub = await apiJson("/api/user/subscription").catch(() => null);
+        setSub(sub);
 
-        const { data: s } = await supabase
-          .from("subscriptions")
-          .select("id,plan,status,renews_at,created_at")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setSub(s || null);
-
-        const { data: i } = await supabase
-          .from("invoices")
-          .select("id,amount_cents,currency,status,period_start,period_end,paid_at")
-          .eq("user_id", user.id)
-          .order("period_start", { ascending: false })
-          .limit(10);
-        setInvoices(i || []);
+        const invData = await apiJson("/api/user/invoices").catch(() => ({ invoices: [] }));
+        setInvoices(invData.invoices || []);
       } finally {
         setLoading(false);
       }
@@ -65,17 +51,7 @@ export default function PersonalBilling() {
   async function handleManageBilling() {
     setPortalLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        alert("Please sign in to manage billing");
-        return;
-      }
-
-      const response = await fetch(`${API_URL}/api/billing/manage`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const response = await apiFetch("/api/billing/manage");
 
       if (response.redirected) {
         window.location.href = response.url;

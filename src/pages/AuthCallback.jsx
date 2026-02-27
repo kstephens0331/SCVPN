@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../store/auth";
 
+const API_BASE = import.meta.env.VITE_API_URL || "https://api.sacvpn.com";
+
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState("processing");
@@ -13,68 +15,56 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check for error parameters first
+        // Check for error parameters
         const errorCode = searchParams.get("error");
         const errorDescription = searchParams.get("error_description");
-        
+
         if (errorCode) {
           if (errorCode === "access_denied" && errorDescription?.includes("expired")) {
             setError("Your email verification link has expired. Please request a new one.");
             setStatus("error");
             return;
           }
-          
           setError(errorDescription || `Authentication error: ${errorCode}`);
           setStatus("error");
           return;
         }
 
-        // Handle the auth session from URL fragments
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          setError("Failed to verify email. Please try again or request a new verification link.");
-          setStatus("error");
-          return;
+        // Handle token-based email verification
+        const token = searchParams.get("token");
+        const type = searchParams.get("type");
+
+        if (token && type === "verify") {
+          const res = await fetch(`${API_BASE}/api/auth/verify-email?token=${encodeURIComponent(token)}`);
+          const data = await res.json();
+
+          if (!res.ok) {
+            setError(data.error || "Email verification failed.");
+            setStatus("error");
+            return;
+          }
         }
 
-        if (data?.session) {
-          // Success - user is authenticated
+        // Check if user has an active session
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
           await refresh();
-          
-          // Get user role and redirect appropriately
-          const { data: { user } } = await supabase.auth.getUser();
-          let role = "client";
-          
-          if (user) {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("role")
-              .eq("id", user.id)
-              .maybeSingle();
-            
-            if (profile?.role) role = profile.role;
-          }
-          
-          // Determine redirect destination
-          const roleToDefault = (r) =>
-            r === "admin" ? "/admin" :
-            r === "business" ? "/app/business/overview" :
+
+          const role = session.user.is_admin ? "admin" : (session.user.role || "client");
+          const target =
+            role === "admin" ? "/admin" :
+            role === "business" ? "/app/business/overview" :
             "/app/personal/overview";
-            
-          const target = roleToDefault(role);
+
           setStatus("success");
-          
-          setTimeout(() => {
-            nav(target, { replace: true });
-          }, 1500);
-          
+          setTimeout(() => nav(target, { replace: true }), 1500);
         } else {
-          setError("No session found. Your verification link may have expired.");
-          setStatus("error");
+          // No session — email verified but user needs to log in
+          setStatus("success");
+          setTimeout(() => nav("/login", { replace: true }), 1500);
         }
-        
+
       } catch (err) {
         console.error("Auth callback error:", err);
         setError("An unexpected error occurred during verification.");
@@ -85,9 +75,7 @@ export default function AuthCallback() {
     handleCallback();
   }, [searchParams, nav, refresh]);
 
-  const requestNewVerification = async () => {
-    // You'll need to implement this based on how your signup works
-    // For now, redirect to login with a message
+  const requestNewVerification = () => {
     nav("/login?message=verification_expired", { replace: true });
   };
 
@@ -101,7 +89,7 @@ export default function AuthCallback() {
             <p className="text-lime-400/80">Please wait while we complete your verification.</p>
           </>
         )}
-        
+
         {status === "success" && (
           <>
             <div className="w-12 h-12 bg-lime-400 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -113,7 +101,7 @@ export default function AuthCallback() {
             <p className="text-lime-400/80">Redirecting you to your dashboard...</p>
           </>
         )}
-        
+
         {status === "error" && (
           <>
             <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -123,7 +111,7 @@ export default function AuthCallback() {
             </div>
             <h1 className="text-2xl font-bold mb-2 text-red-400">Verification failed</h1>
             <p className="text-red-400/80 mb-4">{error}</p>
-            
+
             <div className="space-y-2">
               <button
                 onClick={requestNewVerification}

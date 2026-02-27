@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { apiJson } from "../../lib/api";
 import {
   Shield,
   Wifi,
@@ -23,24 +23,20 @@ export default function PersonalOverview() {
 
   useEffect(() => {
     (async () => {
-      // Fetch devices
-      const { data: d1 } = await supabase.from("devices").select("id");
-      setDevices(d1 || []);
+      try {
+        const data = await apiJson("/api/user/devices");
+        const devices = data.devices || [];
+        setDevices(devices);
+        const map = {};
+        for (const d of devices) {
+          if (d.connected !== undefined) map[d.id] = d.connected;
+        }
+        setConn(map);
 
-      // Fetch connection status
-      const { data: d2 } = await supabase.from("device_latest_telemetry").select("device_id,is_connected");
-      const map = Object.fromEntries((d2 || []).map((x) => [x.device_id, x.is_connected]));
-      setConn(map);
-
-      // Fetch user profile for trial/subscription info
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+        const profileData = await apiJson("/api/user/profile");
         setProfile(profileData);
+      } catch (e) {
+        console.error("Failed to load overview:", e);
       }
     })();
   }, []);

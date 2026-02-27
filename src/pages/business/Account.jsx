@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { apiJson } from "../../lib/api";
 
 export default function BusinessAccount(){
   const [orgs, setOrgs] = useState([]);
@@ -12,44 +12,36 @@ export default function BusinessAccount(){
   // Load orgs the current user belongs to
   useEffect(()=>{ (async()=>{
     setErr("");
-    // Get orgs visible via RLS (owner/member)
-    const { data: os, error } = await supabase
-      .from("organizations")
-      .select("id,name,plan,created_at")
-      .order("name");
-    if (error) { setErr(error.message); return; }
-    setOrgs(os || []);
-    if (os && os[0]) setOrgId(os[0].id);
+    try {
+      const data = await apiJson("/api/user/organizations");
+      const os = data.organizations || [];
+      setOrgs(os);
+      if (os[0]) setOrgId(os[0].id);
+    } catch (e) { setErr(e.message); }
   })(); },[]);
 
   // Load selected org details + user counts
   useEffect(()=>{ (async()=>{
     if (!orgId) { setOrg(null); setCounts({users:0, cap:null}); return; }
     setErr("");
+    try {
+      // org details from organizations list
+      const o = orgs.find(x => x.id === orgId);
+      setOrg(o || null);
 
-    const { data: o, error: e1 } = await supabase
-      .from("organizations")
-      .select("id,name,plan,created_at")
-      .eq("id", orgId)
-      .maybeSingle();
-    if (e1) { setErr(e1.message); return; }
-    setOrg(o);
+      // For member count, get members
+      const membersData = await apiJson(`/api/user/org/${orgId}/members`);
+      const userCount = (membersData.members || []).length;
 
-    // users in org
-    const { count: userCount, error: e2 } = await supabase
-      .from("org_members")
-      .select("user_id", { count: "exact", head: true })
-      .eq("org_id", orgId);
-    if (e2) { setErr(e2.message); return; }
+      // plan user cap
+      let cap = null;
+      if (o?.plan === "business10") cap = 10;
+      if (o?.plan === "business50") cap = 50;
+      if (o?.plan === "business100") cap = 100;
 
-    // plan user cap
-    let cap = null;
-    if (o?.plan === "business10") cap = 10;
-    if (o?.plan === "business50") cap = 50;
-    if (o?.plan === "business100") cap = 100;
-
-    setCounts({ users: userCount || 0, cap });
-  })(); },[orgId]);
+      setCounts({ users: userCount, cap });
+    } catch (e) { setErr(e.message); }
+  })(); },[orgId, orgs]);
 
   const planLabel = useMemo(()=>{
     if (!org?.plan) return "�";

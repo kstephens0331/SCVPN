@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
 import DeviceConfig from "../../components/DeviceConfig";
-import { API_BASE } from "../../lib/apiBase";
+import { apiFetch, apiJson } from "../../lib/api";
 import {
   Monitor,
   Smartphone,
@@ -52,56 +51,16 @@ export default function PersonalDevices() {
   async function requestKey(id) {
     setActionLoading(id);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert("Please log in to request a key");
+      const res = await apiFetch("/api/wireguard/generate-key", {
+        method: "POST",
+        body: JSON.stringify({ device_id: id }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        alert("Failed: " + (result.error || "Unknown error"));
         return;
       }
-
-      try {
-        const response = await fetch(`${API_BASE}/api/wireguard/generate-key`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ device_id: id }),
-        });
-
-        if (response.ok || response.status !== 405) {
-          const result = await response.json();
-          if (!response.ok) {
-            alert("Failed: " + (result.error || "Unknown error"));
-            return;
-          }
-          alert("WireGuard keys generated! Check your email for setup instructions.");
-          await load();
-          return;
-        }
-      } catch (fetchError) {
-        console.warn("New endpoint not available, falling back to RPC:", fetchError);
-      }
-
-      const { error } = await supabase.rpc("request_wg_key", { p_device_id: id });
-      if (error) {
-        alert("Failed: " + error.message);
-        return;
-      }
-
-      try {
-        const processResponse = await fetch(`${API_BASE}/api/wireguard/process-requests`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-        if (processResponse.ok) {
-          alert("WireGuard keys generated! Check your email for setup instructions.");
-        } else {
-          alert("Key request submitted. Check your email in a few moments.");
-        }
-      } catch (processError) {
-        alert("Key request submitted. Check your email in a few moments.");
-      }
-
+      alert("WireGuard keys generated! Check your email for setup instructions.");
       await load();
     } catch (e) {
       alert("Error: " + (e?.message ?? e));
@@ -114,33 +73,17 @@ export default function PersonalDevices() {
     setLoading(true);
     try {
       setErr("");
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        setErr("Please log in to view devices");
-        return;
+      const data = await apiJson("/api/user/devices");
+      const devices = data.devices || [];
+      setRows(devices);
+      // Build connection map from telemetry included in device response
+      const connMap = {};
+      for (const d of devices) {
+        if (d.connected !== undefined) connMap[d.id] = d.connected;
       }
-
-      const { data, error } = await supabase
-        .from("devices")
-        .select("id,name,platform,is_active")
-        .is("org_id", null)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        setErr(error.message);
-        return;
-      }
-
-      setRows(data || []);
-
-      const { data: t } = await supabase
-        .from("device_latest_telemetry")
-        .select("device_id,is_connected");
-
-      setConn(Object.fromEntries((t || []).map((x) => [x.device_id, x.is_connected])));
+      setConn(connMap);
     } catch (e) {
-      setErr("Failed to load devices: " + (e.message || e));
+      setErr(e.message || "Failed to load devices");
     } finally {
       setLoading(false);
     }
@@ -154,72 +97,52 @@ export default function PersonalDevices() {
     setBusy(true);
     setErr("");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      if (!user) {
-        setErr("Not signed in");
-        return;
-      }
       if (!name.trim()) {
         setErr("Please enter a device name.");
         return;
       }
 
-      const { data: newDevice, error } = await supabase
-        .from("devices")
-        .insert({
-          user_id: user.id,
-          org_id: null,
-          name: name.trim(),
-          platform,
-          is_active: true,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        setErr(error.message);
-        return;
-      }
+      const newDevice = await apiJson("/api/user/devices", {
+        method: "POST",
+        body: JSON.stringify({ name: name.trim(), platform }),
+      });
 
       try {
-        const response = await fetch(`${API_BASE}/api/wireguard/generate-key`, {
+        const res = await apiFetch("/api/wireguard/generate-key", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
           body: JSON.stringify({ device_id: newDevice.id }),
         });
-
-        if (response.ok) {
+        if (res.ok) {
           alert("Device added and WireGuard keys generated! Check your email for setup instructions.");
         } else {
-          const result = await response.json();
           alert('Device added. Click "Generate Key" to create WireGuard configuration.');
         }
-      } catch (keyError) {
+      } catch {
         alert('Device added. Click "Generate Key" to create WireGuard configuration.');
       }
 
       setName("");
       setPlatform("android");
       await load();
+    } catch (e) {
+      setErr(e.message || "Failed to add device");
     } finally {
       setBusy(false);
     }
   }
 
   async function renameDevice(id, newName) {
-    const { error } = await supabase.from("devices").update({ name: newName }).eq("id", id);
-    if (error) setErr(error.message);
+    try {
+      await apiJson(`/api/user/devices/${id}`, { method: "PUT", body: JSON.stringify({ name: newName }) });
+    } catch (e) { setErr(e.message); }
     await load();
   }
 
   async function toggle(id, isActive) {
     setActionLoading(id);
-    const { error } = await supabase.from("devices").update({ is_active: !isActive }).eq("id", id);
-    if (error) setErr(error.message);
+    try {
+      await apiJson(`/api/user/devices/${id}`, { method: "PUT", body: JSON.stringify({ is_active: !isActive }) });
+    } catch (e) { setErr(e.message); }
     await load();
     setActionLoading(null);
   }
@@ -227,8 +150,9 @@ export default function PersonalDevices() {
   async function removeDevice(id) {
     if (!confirm("Are you sure you want to remove this device? This action cannot be undone.")) return;
     setActionLoading(id);
-    const { error } = await supabase.from("devices").delete().eq("id", id);
-    if (error) setErr(error.message);
+    try {
+      await apiJson(`/api/user/devices/${id}`, { method: "DELETE" });
+    } catch (e) { setErr(e.message); }
     await load();
     setActionLoading(null);
   }

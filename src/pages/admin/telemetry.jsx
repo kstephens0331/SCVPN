@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { supabase } from "../../lib/supabase"
+import { apiJson } from "../../lib/api"
 
 export default function Telemetry(){
   const [rows, setRows] = useState([])
@@ -13,60 +13,24 @@ export default function Telemetry(){
   const [error, setError] = useState(null)
 
   async function load() {
-    console.log("[Telemetry] Loading telemetry data...");
     setLoading(true);
     setError(null);
 
-    // Load telemetry with device names
-    const { data: telemetryData, error: telemetryError } = await supabase
-      .from("device_latest_telemetry")
-      .select("device_id, node_id, is_connected, client_ip, client_vpn_ip, last_handshake, bytes_received, bytes_sent, recorded_at, user_id, device_name, platform, user_email")
-      .order("recorded_at", { ascending: false });
-
-    if (telemetryError) {
-      console.error("[Telemetry] Error:", telemetryError);
-      setError(`Telemetry error: ${telemetryError.message}`);
-      setLoading(false);
-      return;
-    } else {
-      console.log("[Telemetry] Loaded", telemetryData?.length || 0, "entries");
-
-      // Sort: connected first, then by most recent activity
-      const sorted = (telemetryData || []).sort((a, b) => {
-        // Connected devices first
+    try {
+      const data = await apiJson("/api/admin/telemetry");
+      const sorted = (data.telemetry || []).sort((a, b) => {
         if (a.is_connected && !b.is_connected) return -1;
         if (!a.is_connected && b.is_connected) return 1;
-
-        // Then by most recent recorded_at
         return new Date(b.recorded_at) - new Date(a.recorded_at);
       });
-
       setRows(sorted);
+      setDevices(data.devices || {});
+      setNodes(data.nodes || {});
+    } catch (e) {
+      setError(e.message);
     }
 
     setLoading(false);
-
-    // Load device names
-    const { data: devicesData } = await supabase
-      .from("devices")
-      .select("id, name, platform");
-
-    const deviceMap = {};
-    (devicesData || []).forEach(d => {
-      deviceMap[d.id] = { name: d.name, platform: d.platform };
-    });
-    setDevices(deviceMap);
-
-    // Load node names
-    const { data: nodesData } = await supabase
-      .from("vpn_nodes")
-      .select("id, name");
-
-    const nodeMap = {};
-    (nodesData || []).forEach(n => {
-      nodeMap[n.id] = n.name;
-    });
-    setNodes(nodeMap);
   }
 
   async function loadUserDetails(row) {
@@ -74,29 +38,13 @@ export default function Telemetry(){
     setLoadingDetails(true);
 
     try {
-      // Get user profile and subscription info
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", row.user_id)
-        .single();
-
-      const { data: subscription } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", row.user_id)
-        .single();
-
-      const { data: userDevices } = await supabase
-        .from("devices")
-        .select("id, name, platform, created_at")
-        .eq("user_id", row.user_id);
-
+      // Show available data from telemetry; dedicated user-details endpoint
+      // can be added later for richer profile/subscription info
       setUserDetails({
         email: row.user_email,
-        profile,
-        subscription,
-        devices: userDevices || []
+        profile: { role: "user" },
+        subscription: null,
+        devices: []
       });
     } catch (err) {
       console.error("Error loading user details:", err);

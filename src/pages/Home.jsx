@@ -199,18 +199,18 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                       <TrendingUp className="w-5 h-5 text-brand-400 mb-2" />
-                      <p className="text-2xl font-bold text-white">847 Mbps</p>
+                      <p className="text-2xl font-bold text-white">450 Mbps</p>
                       <p className="text-gray-400 text-sm">Download Speed</p>
                     </div>
                     <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                       <Wifi className="w-5 h-5 text-accent-lime mb-2" />
-                      <p className="text-2xl font-bold text-white">12 ms</p>
+                      <p className="text-2xl font-bold text-white">4 ms</p>
                       <p className="text-gray-400 text-sm">Latency</p>
                     </div>
                     <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                       <Globe className="w-5 h-5 text-accent-cyan mb-2" />
-                      <p className="text-2xl font-bold text-white">50+</p>
-                      <p className="text-gray-400 text-sm">Server Locations</p>
+                      <p className="text-2xl font-bold text-white">Global</p>
+                      <p className="text-gray-400 text-sm">Server Network</p>
                     </div>
                     <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                       <Server className="w-5 h-5 text-accent-purple mb-2" />
@@ -299,7 +299,7 @@ export default function Home() {
               },
               {
                 icon: Globe,
-                title: "50+ Locations",
+                title: "Global Network",
                 description: "Connect to servers worldwide. Bypass geo-restrictions and access global content.",
                 color: "from-accent-purple to-accent-pink",
               },

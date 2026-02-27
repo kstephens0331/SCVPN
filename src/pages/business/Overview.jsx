@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { apiJson } from "../../lib/api";
 import {
   Building2,
   Users,
@@ -30,12 +30,10 @@ export default function BusinessOverview() {
 
   useEffect(() => {
     (async () => {
-      const { data: os } = await supabase.from("organizations").select("id,name").order("name");
-      setOrgs(os || []);
-      if (os && os[0]) {
-        setOrgId(os[0].id);
-        setOrgName(os[0].name);
-      }
+      const data = await apiJson("/api/user/organizations");
+      const os = data.organizations || [];
+      setOrgs(os);
+      if (os[0]) { setOrgId(os[0].id); setOrgName(os[0].name); }
       setLoading(false);
     })();
   }, []);
@@ -44,22 +42,14 @@ export default function BusinessOverview() {
     if (!orgId) return;
     (async () => {
       setLoading(true);
-      // Get devices
-      const { data: d1 } = await supabase.from("devices").select("id,name,platform,is_active").eq("org_id", orgId);
-      setRows(d1 || []);
-
-      // Get connection status
-      const { data: d2 } = await supabase.from("device_latest_telemetry").select("device_id,is_connected");
-      setConn(Object.fromEntries((d2 || []).map((x) => [x.device_id, x.is_connected])));
-
-      // Get subscription info
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("org_id", orgId)
-        .maybeSingle();
-      setSubscription(sub);
-
+      const data = await apiJson(`/api/user/org/${orgId}/devices`);
+      setRows(data.devices || []);
+      const connMap = {};
+      for (const d of (data.devices || [])) {
+        if (d.connected !== undefined) connMap[d.id] = d.connected;
+      }
+      setConn(connMap);
+      setSubscription(data.subscription || null);
       setLoading(false);
     })();
   }, [orgId]);

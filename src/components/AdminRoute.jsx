@@ -4,7 +4,7 @@ import { Navigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 /**
- * Allows access only if the signed-in user's email is in public.admin_emails.
+ * Allows access only if the signed-in user is an admin (from JWT).
  * Falls back to /app/personal/overview if not allowed.
  */
 export default function AdminRoute({ children }) {
@@ -14,33 +14,16 @@ export default function AdminRoute({ children }) {
     let active = true;
 
     const run = async () => {
-      console.log("[AdminRoute] Starting admin check...");
       const { data: { session } } = await supabase.auth.getSession();
-      console.log("[AdminRoute] Session:", session?.user?.email);
       if (!active) return;
 
-      if (!session?.user?.email) {
-        console.log("[AdminRoute] No session/email, denying access");
+      if (!session?.user) {
         setAllowed(false);
         return;
       }
 
-      // Fast existence check against admin_emails (works even if profiles has no role column)
-      const { count, error } = await supabase
-        .from("admin_emails")
-        .select("email", { count: "exact", head: true })
-        .eq("email", session.user.email);
-
-      console.log("[AdminRoute] Admin check result - count:", count, "error:", error);
-
-      if (error) {
-        console.error("Admin check failed:", error);
-        setAllowed(false);
-      } else {
-        const isAllowed = (count ?? 0) > 0;
-        console.log("[AdminRoute] Setting allowed:", isAllowed);
-        setAllowed(isAllowed);
-      }
+      // Admin flag is embedded in the JWT — no DB query needed
+      setAllowed(!!session.user.is_admin);
     };
 
     run();

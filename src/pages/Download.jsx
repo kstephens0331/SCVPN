@@ -124,7 +124,7 @@ const features = [
   {
     icon: Globe,
     title: "Global Network",
-    description: "10+ server locations worldwide for unrestricted access",
+    description: "Server locations worldwide for unrestricted access",
     color: "text-purple-400",
     bg: "bg-purple-500/20",
   },

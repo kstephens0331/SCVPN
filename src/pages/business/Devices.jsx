@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { apiJson } from "../../lib/api";
 import { supabase } from "../../lib/supabase";
 import {
   Building2,
@@ -60,11 +61,12 @@ export default function BusinessDevices() {
 
   useEffect(() => {
     (async () => {
-      const { data: os } = await supabase.from("organizations").select("id,name").order("name");
-      setOrgs(os || []);
-      const { data: { user } } = await supabase.auth.getUser();
-      setMe(user || null);
-      if (os && os[0]) {
+      const data = await apiJson("/api/user/organizations");
+      const os = data.organizations || [];
+      setOrgs(os);
+      const { data: { session } } = await supabase.auth.getSession();
+      setMe(session?.user || null);
+      if (os[0]) {
         setOrgId(os[0].id);
         setOrgName(os[0].name);
       }
@@ -78,76 +80,59 @@ export default function BusinessDevices() {
       setLoading(true);
       setErr("");
 
-      const { data: d1, error: e1 } = await supabase
-        .from("devices")
-        .select("id,name,platform,is_active,org_id,user_id")
-        .eq("org_id", orgId)
-        .order("created_at", { ascending: false });
-      if (e1) {
-        setErr(e1.message);
-        setLoading(false);
-        return;
-      }
-      setRows(d1 || []);
+      try {
+        const data = await apiJson(`/api/user/org/${orgId}/devices`);
+        const devices = data.devices || [];
+        setRows(devices);
 
-      const { data: d2 } = await supabase.from("device_latest_telemetry").select("device_id,is_connected");
-      setConn(Object.fromEntries((d2 || []).map((x) => [x.device_id, x.is_connected])));
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setMyRole("");
-        setUsers([]);
-        setAssignee("");
-        setAssigneeCount(0);
-        setLoading(false);
-        return;
-      }
-
-      const { data: roleRow } = await supabase
-        .from("org_members")
-        .select("role")
-        .eq("org_id", orgId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      const role = (roleRow && roleRow.role) || "";
-      setMyRole(role);
-      setAssignee(user.id);
-
-      if (role === "owner" || role === "admin") {
-        const { data: us, error: rpcErr } = await supabase.rpc("list_org_users", { p_org_id: orgId });
-        if (rpcErr) {
-          setErr(rpcErr.message);
-          setUsers([]);
-        } else {
-          setUsers(us || []);
+        const connMap = {};
+        for (const d of devices) {
+          if (d.connected !== undefined) connMap[d.id] = d.connected;
         }
-      } else {
-        setUsers([]);
+        setConn(connMap);
+
+        const role = data.role || "";
+        setMyRole(role);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
+        if (!user) {
+          setMyRole("");
+          setUsers([]);
+          setAssignee("");
+          setAssigneeCount(0);
+          setLoading(false);
+          return;
+        }
+        setAssignee(user.id);
+
+        if (role === "owner" || role === "admin") {
+          try {
+            const membersData = await apiJson(`/api/user/org/${orgId}/members`);
+            setUsers(membersData.members || []);
+          } catch (e) {
+            setErr(e.message);
+            setUsers([]);
+          }
+        } else {
+          setUsers([]);
+        }
+      } catch (e) {
+        setErr(e.message);
       }
       setLoading(false);
     })();
   }, [orgId]);
 
   useEffect(() => {
-    (async () => {
-      if (!assignee) {
-        setAssigneeCount(0);
-        return;
-      }
-      const { count, error } = await supabase
-        .from("devices")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", assignee)
-        .not("org_id", "is", null);
-      if (error) {
-        setErr(error.message);
-        setAssigneeCount(0);
-      } else {
-        setAssigneeCount(count || 0);
-      }
-    })();
-  }, [assignee]);
+    if (!assignee) {
+      setAssigneeCount(0);
+      return;
+    }
+    // Count from loaded devices for the selected assignee
+    const count = rows.filter(d => d.user_id === assignee).length;
+    setAssigneeCount(count);
+  }, [assignee, rows]);
 
   const canAdd = useMemo(() => {
     if (!name.trim() || !orgId || busy) return false;
@@ -160,41 +145,35 @@ export default function BusinessDevices() {
     try {
       setBusy(true);
       setErr("");
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) {
         setErr("Not signed in");
         return;
       }
-      const userId = isAdmin ? assignee || user.id : user.id;
 
-      const { error } = await supabase.from("devices").insert({
-        org_id: orgId,
-        user_id: userId,
-        name: name.trim(),
-        platform,
-        is_active: true,
+      await apiJson("/api/user/devices", {
+        method: "POST",
+        body: JSON.stringify({
+          name: name.trim(),
+          platform,
+          org_id: orgId,
+        }),
       });
-      if (error) {
-        setErr(error.message);
-        return;
-      }
 
       setName("");
       setPlatform("windows");
 
-      const { data: d1 } = await supabase
-        .from("devices")
-        .select("id,name,platform,is_active,org_id,user_id")
-        .eq("org_id", orgId)
-        .order("created_at", { ascending: false });
-      setRows(d1 || []);
+      // Reload devices
+      const data = await apiJson(`/api/user/org/${orgId}/devices`);
+      const devices = data.devices || [];
+      setRows(devices);
 
-      const { count } = await supabase
-        .from("devices")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .not("org_id", "is", null);
-      setAssigneeCount(count || 0);
+      // Recount from loaded devices
+      const userId = isAdmin ? assignee || user.id : user.id;
+      setAssigneeCount(devices.filter(d => d.user_id === userId).length);
+    } catch (e) {
+      setErr(e.message);
     } finally {
       setBusy(false);
     }
@@ -203,14 +182,17 @@ export default function BusinessDevices() {
   async function toggle(id, isActive) {
     setActionLoading(id);
     setErr("");
-    const { error } = await supabase.from("devices").update({ is_active: !isActive }).eq("id", id);
-    if (error) setErr(error.message);
-    const { data: d1 } = await supabase
-      .from("devices")
-      .select("id,name,platform,is_active,org_id,user_id")
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: false });
-    setRows(d1 || []);
+    try {
+      await apiJson(`/api/user/devices/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ is_active: !isActive }),
+      });
+      // Reload devices
+      const data = await apiJson(`/api/user/org/${orgId}/devices`);
+      setRows(data.devices || []);
+    } catch (e) {
+      setErr(e.message);
+    }
     setActionLoading(null);
   }
 
@@ -218,14 +200,14 @@ export default function BusinessDevices() {
     if (!confirm("Are you sure you want to remove this device?")) return;
     setActionLoading(id);
     setErr("");
-    const { error } = await supabase.from("devices").delete().eq("id", id);
-    if (error) setErr(error.message);
-    const { data: d1 } = await supabase
-      .from("devices")
-      .select("id,name,platform,is_active,org_id,user_id")
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: false });
-    setRows(d1 || []);
+    try {
+      await apiJson(`/api/user/devices/${id}`, { method: "DELETE" });
+      // Reload devices
+      const data = await apiJson(`/api/user/org/${orgId}/devices`);
+      setRows(data.devices || []);
+    } catch (e) {
+      setErr(e.message);
+    }
     setActionLoading(null);
   }
 

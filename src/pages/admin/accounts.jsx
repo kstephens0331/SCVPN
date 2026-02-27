@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { supabase } from "../../lib/supabase"
+import { apiJson } from "../../lib/api"
 
 export default function Accounts(){
   const [users, setUsers] = useState([])
@@ -7,51 +7,18 @@ export default function Accounts(){
   const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(()=>{
-    // Fetch all users - personal users won't have org_members
-    supabase.from("profiles")
-      .select("id, email, full_name, account_type")
-      .then(async ({data: profilesData, error: profilesError})=>{
-        console.log("[Accounts] Profiles:", profilesData, "error:", profilesError);
+    async function load() {
+      try {
+        const userData = await apiJson("/api/admin/users");
+        setUsers(userData.users || []);
 
-        if (profilesData) {
-          // Get org memberships separately
-          const { data: memberships } = await supabase
-            .from("org_members")
-            .select("user_id, organizations(name)");
-
-          const orgMap = {};
-          (memberships || []).forEach(m => {
-            orgMap[m.user_id] = m.organizations?.name;
-          });
-
-          const usersWithOrgs = profilesData.map(u => ({
-            ...u,
-            org_name: orgMap[u.id] || null
-          }));
-          setUsers(usersWithOrgs);
-        }
-      });
-
-    // Fetch organizations with member count
-    supabase.from("organizations")
-      .select("id, name, plan, is_active")
-      .then(async ({data, error})=>{
-        console.log("[Accounts] Organizations:", data, "error:", error);
-
-        if (data) {
-          // Get member counts
-          const orgsWithCounts = await Promise.all(
-            data.map(async (org) => {
-              const { count } = await supabase
-                .from("org_members")
-                .select("*", { count: "exact", head: true })
-                .eq("organization_id", org.id);
-              return { ...org, member_count: count || 0 };
-            })
-          );
-          setOrgs(orgsWithCounts);
-        }
-      });
+        const orgData = await apiJson("/api/admin/organizations");
+        setOrgs(orgData.organizations || []);
+      } catch (e) {
+        console.error("Failed to load accounts:", e);
+      }
+    }
+    load();
   },[])
 
   const filteredUsers = users.filter(u => {

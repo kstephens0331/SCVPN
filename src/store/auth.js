@@ -9,13 +9,15 @@ export const useAuth = create((set) => ({
     const user = session?.user ?? null
     let profile = null
     if (user){
-      const { data } = await supabase.from("profiles")
-        .select("id,email,full_name,account_type").eq("id", user.id).maybeSingle()
-      profile = data ?? null
+      // Profile data is included in the JWT/session — no DB query needed
+      profile = {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name || user.user_metadata?.full_name || null,
+        account_type: user.account_type || "personal",
+      }
     }
-    const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || "")
-      .split(",").map(s=>s.trim().toLowerCase()).filter(Boolean)
-    const isAdmin = !!user?.email && adminEmails.includes(user.email.toLowerCase())
+    const isAdmin = !!user?.is_admin
     set({ session: session ?? null, user, profile, isAdmin, loading: false })
   },
   async signOut(){ await supabase.auth.signOut(); set({ session:null, user:null, profile:null, isAdmin:false }) }

@@ -1,17 +1,23 @@
 ﻿import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { apiJson } from "../../lib/api";
 export default function PersonalAccount(){
   const [profile, setProfile] = useState({ full_name: "", avatar_url: "" });
   const [msg, setMsg] = useState("");
   useEffect(()=>{ (async()=>{
-    const { data:{ user } } = await supabase.auth.getUser();
-    const { data } = await supabase.from("profiles").select("full_name,avatar_url").eq("id", user.id).maybeSingle();
-    setProfile(data || { full_name:"", avatar_url:"" });
+    try {
+      const data = await apiJson("/api/user/profile");
+      setProfile(data || { full_name: "", avatar_url: "" });
+    } catch (e) {
+      console.error("Failed to load profile:", e);
+    }
   })(); },[]);
   async function save(){
-    const { data:{ user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
-    setMsg(error? error.message : "Saved");
+    try {
+      await apiJson("/api/user/profile", { method: "PUT", body: JSON.stringify(profile) });
+      setMsg("Saved");
+    } catch (e) {
+      setMsg(e.message || "Error");
+    }
     setTimeout(()=>setMsg(""), 2000);
   }
   return (

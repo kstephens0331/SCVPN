@@ -125,6 +125,58 @@ export class EmailService {
     }
   }
 
+  // Send email verification email
+  async sendVerificationEmail({ userEmail, userName, verifyUrl }) {
+    if (!this.sendGridConfigured) return { success: false, error: 'Email service not configured' };
+    try {
+      const msg = {
+        to: userEmail,
+        from: this.fromEmail,
+        subject: 'Verify your SACVPN email',
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #10b981;">Verify Your Email</h2>
+            <p>Hi ${userName},</p>
+            <p>Click the button below to verify your email address:</p>
+            <a href="${verifyUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 16px 0;">Verify Email</a>
+            <p style="color: #666; font-size: 14px;">This link expires in 24 hours. If you didn't create an account, you can ignore this email.</p>
+          </div>
+        `.trim(),
+      };
+      const response = await sgMail.send(msg);
+      return { success: true, messageId: response[0].headers['x-message-id'] };
+    } catch (error) {
+      this.logger.error({ error: error.message }, 'Verification email failed');
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Send password reset email
+  async sendPasswordResetEmail({ userEmail, userName, resetUrl }) {
+    if (!this.sendGridConfigured) return { success: false, error: 'Email service not configured' };
+    try {
+      const msg = {
+        to: userEmail,
+        from: this.fromEmail,
+        subject: 'Reset your SACVPN password',
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #10b981;">Reset Your Password</h2>
+            <p>Hi ${userName},</p>
+            <p>Click the button below to reset your password:</p>
+            <a href="${resetUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 16px 0;">Reset Password</a>
+            <p style="color: #666; font-size: 14px;">This link expires in 1 hour. If you didn't request a password reset, you can ignore this email.</p>
+          </div>
+        `.trim(),
+      };
+      const response = await sgMail.send(msg);
+      return { success: true, messageId: response[0].headers['x-message-id'] };
+    } catch (error) {
+      this.logger.error({ error: error.message }, 'Password reset email failed');
+      return { success: false, error: error.message };
+    }
+  }
+
   // Download URLs for desktop app
   getDownloadUrls() {
     return {

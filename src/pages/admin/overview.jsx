@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { supabase } from "../../lib/supabase"
+import { apiJson } from "../../lib/api"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 function StatCard({ label, value, to }) {
@@ -17,27 +17,19 @@ export default function Overview(){
   const [tel, setTel] = useState([])
 
   useEffect(()=>{
-    Promise.all([
-      supabase.from("profiles").select("*", { count:"exact", head:true }),
-      supabase.from("organizations").select("*", { count:"exact", head:true }),
-      supabase.from("devices").select("*", { count:"exact", head:true }),
-      supabase.from("device_latest_telemetry").select("device_id,is_connected"),
-      supabase.from("telemetry").select("ts,rx_bytes,tx_bytes").gte("ts", new Date(Date.now()-24*60*60*1000).toISOString())
-    ]).then(([u,o,d,t,tele])=>{
-      console.log("[Admin Overview] Profiles:", u.count, "error:", u.error);
-      console.log("[Admin Overview] Organizations:", o.count, "error:", o.error);
-      console.log("[Admin Overview] Devices:", d.count, "error:", d.error);
-      console.log("[Admin Overview] Device telemetry:", t.data?.length, "error:", t.error);
-      console.log("[Admin Overview] Telemetry:", tele.data?.length, "error:", tele.error);
+    async function load() {
+      try {
+        const stats = await apiJson("/api/admin/stats");
+        setStats(stats);
 
-      setStats({
-        users: u.count||0,
-        orgs: o.count||0,
-        devices: d.count||0,
-        activeDevices: (t.data||[]).filter(x=>x.is_connected).length
-      })
-      setTel(tele.data||[])
-    })
+        // Telemetry chart data can be added to the stats endpoint later
+        // For now, set empty
+        setTel([]);
+      } catch (e) {
+        console.error("Failed to load admin stats:", e);
+      }
+    }
+    load();
   },[])
 
   const hourly = useMemo(()=>{

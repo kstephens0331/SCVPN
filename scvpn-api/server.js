@@ -8,6 +8,8 @@ import QRCode from "qrcode";
 import { WireGuardManager } from "./wireguard-manager.js";
 import { EmailService } from "./email-service.js";
 import db from "./db.js";
+import registerAuthRoutes, { authenticateRequest } from "./auth-routes.js";
+import registerUserRoutes from "./user-routes.js";
 
 // ---- Env ----
 const {
@@ -26,14 +28,25 @@ const {
   STRIPE_PRICE_BUSINESS50,
   STRIPE_PRICE_BUSINESS100,
 
-  // Supabase (auth only — free tier)
+  // Supabase (kept temporarily for lazy password migration)
   SCVPN_SUPABASE_URL,
   SCVPN_SUPABASE_SERVICE_KEY,
   STRIPE_WEBHOOK_SECRET,
 
+  // JWT Auth
+  JWT_SECRET,
+
   // Email (SendGrid)
-  SENDGRID_API_KEY
+  SENDGRID_API_KEY,
+
+  // Admin emails (comma-separated)
+  ADMIN_EMAILS: ADMIN_EMAILS_ENV = "info@stephenscode.dev",
 } = process.env;
+
+// Admin email set for fast lookups
+const ADMIN_EMAILS = new Set(
+  (ADMIN_EMAILS_ENV || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
+);
 
 // ---- Helpers / constants used later ----
 const PRICE_MAP = {
@@ -458,20 +471,13 @@ async function init() {
   app.get("/api/billing/manage", async (req, reply) => {
     try {
       if (!requireStripe(reply)) return;
-      if (!supabase) return reply.code(500).send({ error: "Auth service not configured" });
 
-      // Get current user from session
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // Verify JWT token
+      const decoded = authenticateRequest(req, JWT_SECRET);
+      if (!decoded) {
         return reply.code(401).send({ error: "Unauthorized" });
       }
-
-      const token = authHeader.substring(7);
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-      if (authError || !user) {
-        return reply.code(401).send({ error: "Invalid token" });
-      }
+      const user = { id: decoded.sub, email: decoded.email };
 
       // Find customer's Stripe customer ID from subscriptions table
       const { rows: [sub] } = await db.query(
@@ -627,10 +633,6 @@ async function init() {
         app.log.error("[generate-key] WireGuard manager not initialized");
         return reply.code(500).send({ error: "WireGuard manager not initialized" });
       }
-      if (!supabase) {
-        app.log.error("[generate-key] Auth service not initialized");
-        return reply.code(500).send({ error: "Auth service not initialized" });
-      }
 
       const { device_id } = req.body || {};
       if (!device_id) {
@@ -638,20 +640,13 @@ async function init() {
         return reply.code(400).send({ error: "Missing device_id" });
       }
 
-      // Get authenticated user (Supabase Auth — JWT verification)
-      const authHeader = req.headers.authorization;
-      if (!authHeader) {
-        app.log.warn("[generate-key] Missing authorization header");
-        return reply.code(401).send({ error: "Missing authorization" });
-      }
-
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-      if (authError || !user) {
-        app.log.warn({ authError }, "[generate-key] Unauthorized");
+      // Verify JWT token
+      const decoded = authenticateRequest(req, JWT_SECRET);
+      if (!decoded) {
+        app.log.warn("[generate-key] Unauthorized - invalid token");
         return reply.code(401).send({ error: "Unauthorized" });
       }
+      const user = { id: decoded.sub, email: decoded.email };
 
       app.log.info({ userId: user.id, deviceId: device_id }, "[generate-key] User authenticated");
 
@@ -1276,6 +1271,10 @@ async function init() {
       return reply.code(500).send({ error: "provisioning failed" });
     }
   });
+
+  // ---- Register auth & user data routes ----
+  registerAuthRoutes(app, { db, emailService, supabase, JWT_SECRET, ADMIN_EMAILS, SITE_URL });
+  registerUserRoutes(app, { db, JWT_SECRET, ADMIN_EMAILS });
 
   // ---- Start ----
   const port = Number(PORT || 3000);
