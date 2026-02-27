@@ -2,6 +2,9 @@
 import { spawn } from "child_process";
 import { promisify } from "util";
 import { createHash, randomBytes } from "crypto";
+import { writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import nacl from "tweetnacl";
 
 export class WireGuardManager {
@@ -255,11 +258,8 @@ export class WireGuardManager {
     if (this._sshKeyPath) return this._sshKeyPath;
     const keyContent = process.env.VPN_NODE_SSH_KEY;
     if (!keyContent) return null;
-    const fs = require('fs');
-    const os = require('os');
-    const path = require('path');
-    const keyPath = path.join(os.tmpdir(), 'vpn_node_key');
-    fs.writeFileSync(keyPath, keyContent + '\n', { mode: 0o600 });
+    const keyPath = join(tmpdir(), 'vpn_node_key');
+    writeFileSync(keyPath, keyContent + '\n', { mode: 0o600 });
     this._sshKeyPath = keyPath;
     return keyPath;
   }
