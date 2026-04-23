@@ -10,11 +10,11 @@
 ```bash
 # Supabase
 VITE_SUPABASE_URL=https://ltwuqjmncldopkutiyak.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0d3Vxam1uY2xkb3BrdXRpeWFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4Mjk5NDQsImV4cCI6MjA3MTQwNTk0NH0.JdboTA0XjFLbr_xG7fi9GKa2QiS0hqFpzr-FD1Q6f0Q
+VITE_SUPABASE_ANON_KEY=<REDACTED-SUPABASE-ANON-KEY>
 
 # Stripe
 STRIPE_SECRET_KEY=<configured in Railway dashboard>
-STRIPE_PUBLISHABLE_KEY=pk_live_51RK1KrDcTrtfdJcSaB7uKNkMTbfnC7i2DzKglQBpLEUnIOhBU1q6i6Dxj2ZNu6Ju4UwxxaGa4iaOhWj5t4Mq7HRt00dbwgDNue
+STRIPE_PUBLISHABLE_KEY=<REDACTED-STRIPE-PUBLISHABLE-KEY>
 STRIPE_WEBHOOK_SECRET=<configured in Railway dashboard>
 STRIPE_PRICE_PERSONAL=price_1RM6MTDcTrtfdJcSxlsRLpiX
 STRIPE_PRICE_GAMING=price_1RM6NaDcTrtfdJcSZk0j6ZSJ
@@ -40,12 +40,12 @@ Go to Railway Dashboard → Your Project → Variables → Add these:
 
 ### **1. Supabase Service Role Key (CRITICAL)**
 ```bash
-SCVPN_SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0d3Vxam1uY2xkb3BrdXRpeWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTgyOTk0NCwiZXhwIjoyMDcxNDA1OTQ0fQ.J0GjiUMfB5dtO6QItZvtQiSduNRLWZDcW5gDZL91fIc
+SCVPN_SUPABASE_SERVICE_KEY=<REDACTED-SUPABASE-SERVICE-KEY>
 ```
 
 ### **2. VPN Node SSH Password (CRITICAL)**
 ```bash
-VPN_NODE_SSH_PASSWORD=78410889Ks!
+VPN_NODE_SSH_PASSWORD=<REDACTED-SERVER-PASSWORD>
 ```
 
 ### **3. Site URL (if missing)**
@@ -73,9 +73,9 @@ RESEND_API_KEY=re_YourKeyHere
 
 ### Method 2: Railway CLI (if installed)
 ```bash
-railway variables set SCVPN_SUPABASE_SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0d3Vxam1uY2xkb3BrdXRpeWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTgyOTk0NCwiZXhwIjoyMDcxNDA1OTQ0fQ.J0GjiUMfB5dtO6QItZvtQiSduNRLWZDcW5gDZL91fIc"
+railway variables set SCVPN_SUPABASE_SERVICE_KEY="<REDACTED-SUPABASE-SERVICE-KEY>"
 
-railway variables set VPN_NODE_SSH_PASSWORD="78410889Ks!"
+railway variables set VPN_NODE_SSH_PASSWORD="<REDACTED-SERVER-PASSWORD>"
 railway variables set SITE_URL="https://www.sacvpn.com"
 ```
 

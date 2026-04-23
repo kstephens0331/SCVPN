@@ -76,10 +76,10 @@ echo "✅ VA Primary configured"
 '@
 
 # Execute on VA Primary
-echo y | plink -ssh ubuntu@135.148.121.237 -pw "78410889Ks!" $vaSetupScript
+echo y | plink -ssh ubuntu@135.148.121.237 -pw "<REDACTED-SERVER-PASSWORD>" $vaSetupScript
 
 # Copy config file
-pscp -pw "78410889Ks!" "$env:TEMP\wg0-va.conf" ubuntu@135.148.121.237:/tmp/wg0.conf
+pscp -pw "<REDACTED-SERVER-PASSWORD>" "$env:TEMP\wg0-va.conf" ubuntu@135.148.121.237:/tmp/wg0.conf
 
 # Install config and start service
 $vaStartScript = @'
@@ -91,7 +91,7 @@ sleep 2 &&
 sudo wg show
 '@
 
-echo y | plink -ssh ubuntu@135.148.121.237 -pw "78410889Ks!" $vaStartScript
+echo y | plink -ssh ubuntu@135.148.121.237 -pw "<REDACTED-SERVER-PASSWORD>" $vaStartScript
 
 Write-Host "✅ VA Primary deployed!" -ForegroundColor Green
 Write-Host ""
@@ -112,10 +112,10 @@ echo "✅ Dallas configured"
 '@
 
 # Execute on Dallas
-echo y | plink -ssh root@45.79.8.145 -pw "78410889Ks!" $dallasSetupScript
+echo y | plink -ssh root@45.79.8.145 -pw "<REDACTED-SERVER-PASSWORD>" $dallasSetupScript
 
 # Copy config file
-pscp -pw "78410889Ks!" "$env:TEMP\wg0-dallas.conf" root@45.79.8.145:/tmp/wg0.conf
+pscp -pw "<REDACTED-SERVER-PASSWORD>" "$env:TEMP\wg0-dallas.conf" root@45.79.8.145:/tmp/wg0.conf
 
 # Install config and start service
 $dallasStartScript = @'
@@ -127,7 +127,7 @@ sleep 2 &&
 wg show
 '@
 
-echo y | plink -ssh root@45.79.8.145 -pw "78410889Ks!" $dallasStartScript
+echo y | plink -ssh root@45.79.8.145 -pw "<REDACTED-SERVER-PASSWORD>" $dallasStartScript
 
 Write-Host "✅ Dallas Central deployed!" -ForegroundColor Green
 Write-Host ""

@@ -89,7 +89,7 @@ sudo chmod +x /opt/sacvpn/*.sh
 
 # Set environment variables for VA Primary
 echo 'export SCVPN_SUPABASE_URL="https://ltwuqjmncldopkutiyak.supabase.co"' | sudo tee -a /etc/environment
-echo 'export SCVPN_SUPABASE_SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0d3Vxam1uY2xkb3BrdXRpeWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTgyOTk0NCwiZXhwIjoyMDcxNDA1OTQ0fQ.J0GjiUMfB5dtO6QItZvtQiSduNRLWZDcW5gDZL91fIc"' | sudo tee -a /etc/environment
+echo 'export SCVPN_SUPABASE_SERVICE_KEY="<REDACTED-SUPABASE-SERVICE-KEY>"' | sudo tee -a /etc/environment
 echo 'export HOST_NAME="VA Primary"' | sudo tee -a /etc/environment
 echo 'export NODE_NAME="SACVPN-VA-Primary"' | sudo tee -a /etc/environment
 echo 'export WG_INTERFACE="wg0"' | sudo tee -a /etc/environment
@@ -116,7 +116,7 @@ chmod +x /opt/sacvpn/*.sh
 
 # Set environment variables for Dallas Central
 echo 'export SCVPN_SUPABASE_URL="https://ltwuqjmncldopkutiyak.supabase.co"' | tee -a /etc/environment
-echo 'export SCVPN_SUPABASE_SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0d3Vxam1uY2xkb3BrdXRpeWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTgyOTk0NCwiZXhwIjoyMDcxNDA1OTQ0fQ.J0GjiUMfB5dtO6QItZvtQiSduNRLWZDcW5gDZL91fIc"' | tee -a /etc/environment
+echo 'export SCVPN_SUPABASE_SERVICE_KEY="<REDACTED-SUPABASE-SERVICE-KEY>"' | tee -a /etc/environment
 echo 'export HOST_NAME="Dallas Central"' | tee -a /etc/environment
 echo 'export NODE_NAME="SACVPN-Dallas-Central"' | tee -a /etc/environment
 echo 'export WG_INTERFACE="wg0"' | tee -a /etc/environment
@@ -179,7 +179,7 @@ The current issue is that when a device config is generated, it's saved to the d
 In Railway, add this environment variable:
 
 ```
-VPN_NODE_SSH_PASSWORD=78410889Ks!
+VPN_NODE_SSH_PASSWORD=<REDACTED-SERVER-PASSWORD>
 ```
 
 This allows the backend to SSH into VPN servers and run `wg set` commands.
@@ -190,10 +190,10 @@ From your Railway backend, you should be able to SSH:
 
 ```bash
 # Test SSH to VA Primary
-sshpass -p "78410889Ks!" ssh -o StrictHostKeyChecking=no ubuntu@135.148.121.237 "wg show"
+sshpass -p "<REDACTED-SERVER-PASSWORD>" ssh -o StrictHostKeyChecking=no ubuntu@135.148.121.237 "wg show"
 
 # Test SSH to Dallas Central
-sshpass -p "78410889Ks!" ssh -o StrictHostKeyChecking=no root@45.79.8.145 "wg show"
+sshpass -p "<REDACTED-SERVER-PASSWORD>" ssh -o StrictHostKeyChecking=no root@45.79.8.145 "wg show"
 ```
 
 ### 3.3 Install sshpass in Railway

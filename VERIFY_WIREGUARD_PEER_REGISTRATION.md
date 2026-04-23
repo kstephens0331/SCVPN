@@ -198,7 +198,7 @@ CMD ["node", "server.js"]
 
 Check Railway variables for:
 ```
-VPN_NODE_SSH_PASSWORD=78410889Ks!
+VPN_NODE_SSH_PASSWORD=<REDACTED-SERVER-PASSWORD>
 ```
 
 **If missing:** SSH will fail

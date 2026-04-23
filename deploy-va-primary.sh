@@ -10,7 +10,7 @@ echo "========================================"
 # Server details
 SERVER_IP="135.148.121.237"
 SERVER_USER="ubuntu"
-SERVER_PASSWORD="78410889Ks!"
+SERVER_PASSWORD="<REDACTED-SERVER-PASSWORD>"
 
 # WireGuard config
 PRIVATE_KEY="nMPOwCtInSfDUIl7RQc8WM4+gBy88Cq7dghvAH3LVSs="

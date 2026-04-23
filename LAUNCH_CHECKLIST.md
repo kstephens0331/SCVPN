@@ -13,7 +13,7 @@
 ```bash
 # SSH into the server
 ssh ubuntu@135.148.121.237
-# Password: 78410889Ks!
+# Password: <REDACTED-SERVER-PASSWORD>
 
 # Install WireGuard
 sudo apt-get update
@@ -59,7 +59,7 @@ sudo wg show
 ```bash
 # SSH into the server
 ssh root@45.79.8.145
-# Password: 78410889Ks!
+# Password: <REDACTED-SERVER-PASSWORD>
 
 # Install WireGuard
 apt-get update
@@ -147,13 +147,13 @@ wg show
 **Add if missing:**
 ```
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
-VPN_NODE_SSH_PASSWORD=78410889Ks!
+VPN_NODE_SSH_PASSWORD=<REDACTED-SERVER-PASSWORD>
 ```
 
 **Verify these exist:**
 ```
 STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxxxxxxxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxx
+STRIPE_WEBHOOK_SECRET=<REDACTED-STRIPE-WEBHOOK-SECRET>
 SCVPN_SUPABASE_URL=https://ltwuqjmncldopkutiyak.supabase.co
 SCVPN_SUPABASE_SERVICE_KEY=eyJhbGc... (long key)
 SITE_URL=https://www.sacvpn.com

@@ -9,7 +9,7 @@
 ### Step 1: SSH into VA Primary
 ```bash
 ssh ubuntu@135.148.121.237
-# Password: 78410889Ks!
+# Password: <REDACTED-SERVER-PASSWORD>
 ```
 
 ### Step 2: Install WireGuard
@@ -88,7 +88,7 @@ interface: wg0
 ### Step 1: SSH into Dallas
 ```bash
 ssh root@45.79.8.145
-# Password: 78410889Ks!
+# Password: <REDACTED-SERVER-PASSWORD>
 ```
 
 ### Step 2: Install WireGuard
@@ -223,7 +223,7 @@ sudo ufw enable
 ## 📊 NEXT STEPS AFTER DEPLOYMENT
 
 1. ✅ Both nodes installed and running
-2. ⏳ Add to Railway: `VPN_NODE_SSH_PASSWORD=78410889Ks!`
+2. ⏳ Add to Railway: `VPN_NODE_SSH_PASSWORD=<REDACTED-SERVER-PASSWORD>`
 3. ⏳ Test key generation from dashboard
 4. ⏳ Download config and test VPN connection
 5. ⏳ Set up email notifications

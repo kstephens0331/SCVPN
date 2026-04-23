@@ -3,7 +3,7 @@
 ## Your Server Details:
 - **Server 1**: `135.148.121.237` (ubuntu user)
 - **Server 2**: `45.79.8.145` (root user)
-- **Password**: `78410889Ks!`
+- **Password**: `<REDACTED-SERVER-PASSWORD>`
 
 ## Step 1: Run Database Setup ✅
 
@@ -16,7 +16,7 @@ SSH into each server and install WireGuard:
 ### Server 1 (135.148.121.237):
 ```bash
 ssh ubuntu@135.148.121.237
-# Enter password: 78410889Ks!
+# Enter password: <REDACTED-SERVER-PASSWORD>
 
 # Install WireGuard
 sudo apt update
@@ -33,7 +33,7 @@ sudo mkdir -p /etc/wireguard
 ### Server 2 (45.79.8.145):
 ```bash
 ssh root@45.79.8.145
-# Enter password: 78410889Ks!
+# Enter password: <REDACTED-SERVER-PASSWORD>
 
 # Install WireGuard
 apt update
@@ -135,7 +135,7 @@ SCVPN_SUPABASE_URL=your-supabase-url
 SCVPN_SUPABASE_SERVICE_KEY=your-service-key
 
 # New WireGuard vars:
-VPN_NODE_SSH_PASSWORD=78410889Ks!
+VPN_NODE_SSH_PASSWORD=<REDACTED-SERVER-PASSWORD>
 ```
 
 ## Step 6: Deploy Updated API

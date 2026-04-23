@@ -135,7 +135,7 @@
 ### 2. Railway Environment Variables 🔴 **CRITICAL**
 **User must add to Railway:**
 - [ ] `RESEND_API_KEY` - For email notifications (get from resend.com)
-- [ ] `VPN_NODE_SSH_PASSWORD` - Already known: `78410889Ks!`
+- [ ] `VPN_NODE_SSH_PASSWORD` - Already known: `<REDACTED-SERVER-PASSWORD>`
 - [ ] `SCVPN_SUPABASE_SERVICE_KEY` - User already has this
 - [ ] `SITE_URL` - Already set: `https://www.sacvpn.com`
 

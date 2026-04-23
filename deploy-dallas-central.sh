@@ -10,7 +10,7 @@ echo "==========================================="
 # Server details
 SERVER_IP="45.79.8.145"
 SERVER_USER="root"
-SERVER_PASSWORD="78410889Ks!"
+SERVER_PASSWORD="<REDACTED-SERVER-PASSWORD>"
 
 # WireGuard config
 PRIVATE_KEY="a3YWIHKfwF+ksp7WET7K/YJbAPAFJj6t4nLpeMJcPmM="

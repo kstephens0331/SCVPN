@@ -91,7 +91,7 @@ Auth only (login/signup/JWT)
 | `STRIPE_PRICE_BUSINESS100` | Stripe price ID for Business 100 | `price_...` — **get from Railway** |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | **NEW value** — after creating Texas webhook endpoint in Stripe |
 | `SCVPN_SUPABASE_URL` | Supabase project URL (auth only) | `https://ltwuqjmncldopkutiyak.supabase.co` |
-| `SCVPN_SUPABASE_SERVICE_KEY` | Supabase service role key | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0d3Vxam1uY2xkb3BrdXRpeWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTgyOTk0NCwiZXhwIjoyMDcxNDA1OTQ0fQ.J0GjiUMfB5dtO6QItZvtQiSduNRLWZDcW5gDZL91fIc` |
+| `SCVPN_SUPABASE_SERVICE_KEY` | Supabase service role key | `<REDACTED-SUPABASE-SERVICE-KEY>` |
 | `SENDGRID_API_KEY` | SendGrid email API key | **get from Railway** |
 | `VPN_NODE_SSH_PASSWORD` | Global SSH password for VA/Dallas nodes | **get from Railway** |
 

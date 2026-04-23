@@ -52,14 +52,14 @@ Quick version:
 **VA Primary:**
 ```powershell
 ssh ubuntu@135.148.121.237
-# Password: 78410889Ks!
+# Password: <REDACTED-SERVER-PASSWORD>
 ```
 Then paste commands from MANUAL_DEPLOYMENT_STEPS.md (VA PRIMARY section)
 
 **Dallas Central:**
 ```powershell
 ssh root@45.79.8.145
-# Password: 78410889Ks!
+# Password: <REDACTED-SERVER-PASSWORD>
 ```
 Then paste commands from MANUAL_DEPLOYMENT_STEPS.md (DALLAS CENTRAL section)
 
@@ -72,9 +72,9 @@ Go to: https://railway.app/project/2b5f8eee-06d2-4e7f-b344-cf29580514e5
 Click your **scvpn-api** service → **Variables** tab → Add these:
 
 ```bash
-SCVPN_SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0d3Vxam1uY2xkb3BrdXRpeWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTgyOTk0NCwiZXhwIjoyMDcxNDA1OTQ0fQ.J0GjiUMfB5dtO6QItZvtQiSduNRLWZDcW5gDZL91fIc
+SCVPN_SUPABASE_SERVICE_KEY=<REDACTED-SUPABASE-SERVICE-KEY>
 
-VPN_NODE_SSH_PASSWORD=78410889Ks!
+VPN_NODE_SSH_PASSWORD=<REDACTED-SERVER-PASSWORD>
 
 SITE_URL=https://www.sacvpn.com
 ```
