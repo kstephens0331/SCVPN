@@ -50,6 +50,7 @@ import GamingVPN from "./pages/use-cases/GamingVPN.jsx";
 import PersonalVPN from "./pages/use-cases/PersonalVPN.jsx";
 import Compare from "./pages/Compare.jsx";
 import TrustedPartners from "./pages/TrustedPartners.jsx";
+import NotFound from "./pages/NotFound.jsx";
 
 import useAuthRedirect from './utils/useAuthRedirect';
 import useAutoLogout from './utils/useAutoLogout';
@@ -120,6 +121,9 @@ export default function App() {
 </Route>
 
   <Route path="/post-checkout" element={<PostCheckout/>} />
+  <Route element={<Layout />}>
+    <Route path="*" element={<NotFound />} />
+  </Route>
 </Routes>
   );
 }

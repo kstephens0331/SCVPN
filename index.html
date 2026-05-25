@@ -21,6 +21,9 @@
     <meta property="og:title" content="SACVPN - Secure VPN Service | Fast, Private & WireGuard Powered" />
     <meta property="og:description" content="Enterprise-grade VPN security powered by WireGuard. Protect unlimited devices, enjoy gaming-optimized routes, and secure your business." />
     <meta property="og:image" content="https://www.sacvpn.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SACVPN logo, the WireGuard-powered secure VPN service for personal, gaming, and business use." />
     <meta property="og:site_name" content="SACVPN" />
     <meta property="og:locale" content="en_US" />
 
@@ -30,6 +33,7 @@
     <meta name="twitter:title" content="SACVPN - Secure VPN Service | Fast, Private & WireGuard Powered" />
     <meta name="twitter:description" content="Enterprise-grade VPN security powered by WireGuard. Protect unlimited devices, enjoy gaming-optimized routes, and secure your business." />
     <meta name="twitter:image" content="https://www.sacvpn.com/og-image.png" />
+    <meta name="twitter:image:alt" content="SACVPN logo, the WireGuard-powered secure VPN service for personal, gaming, and business use." />
 
     <!-- Fonts: Inter for body, Manrope for display, Fira Code for mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -40,15 +44,30 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/sacvpn-logo.svg" />
     <meta name="theme-color" content="#0ea5e9" />
 
+    <!-- Structured Data - Person (founder) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "@id": "https://www.sacvpn.com/#founder",
+      "name": "Kyle Stephens",
+      "jobTitle": "Founder",
+      "worksFor": { "@id": "https://www.sacvpn.com/#org" },
+      "url": "https://stephenscode.dev"
+    }
+    </script>
+
     <!-- Structured Data - Organization -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
+      "@id": "https://www.sacvpn.com/#org",
       "name": "SACVPN",
       "url": "https://www.sacvpn.com",
       "logo": "https://www.sacvpn.com/sacvpn-logo.svg",
       "description": "Enterprise-grade VPN security powered by WireGuard protocol.",
+      "founder": { "@id": "https://www.sacvpn.com/#founder" },
       "sameAs": [],
       "contactPoint": {
         "@type": "ContactPoint",
@@ -58,17 +77,33 @@
     }
     </script>
 
+    <!-- Structured Data - WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": "https://www.sacvpn.com/#website",
+      "url": "https://www.sacvpn.com/",
+      "name": "SACVPN",
+      "description": "Secure VPN service powered by WireGuard for personal, gaming, and business use.",
+      "publisher": { "@id": "https://www.sacvpn.com/#org" },
+      "inLanguage": "en-US"
+    }
+    </script>
+
     <!-- Structured Data - Product -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Product",
+      "@id": "https://www.sacvpn.com/#product",
       "name": "SACVPN",
       "description": "Secure VPN service with WireGuard protocol for personal, gaming, and business use.",
       "brand": {
         "@type": "Brand",
         "name": "SACVPN"
       },
+      "manufacturer": { "@id": "https://www.sacvpn.com/#org" },
       "offers": {
         "@type": "AggregateOffer",
         "lowPrice": "6.91",
@@ -85,13 +120,11 @@
     {
       "@context": "https://schema.org",
       "@type": "Service",
+      "@id": "https://www.sacvpn.com/#service-business",
       "serviceType": "Enterprise VPN Service",
       "name": "SACVPN Business VPN Solutions",
       "description": "Managed VPN services for businesses, including secure remote access, site-to-site VPN, and dedicated enterprise VPN solutions with 24/7 support.",
-      "provider": {
-        "@type": "Organization",
-        "name": "SACVPN"
-      },
+      "provider": { "@id": "https://www.sacvpn.com/#org" },
       "areaServed": {
         "@type": "Country",
         "name": "United States"
