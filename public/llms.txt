@@ -1,0 +1,82 @@
+# SACVPN - AI Assistant Information
+
+> SACVPN is a consumer + small business VPN service operated by StephensCode LLC. WireGuard-based, with unlimited device connections, QR-code mobile setup, dedicated gaming-optimized routes, and team plans for 10-250 users.
+
+## Service Overview
+
+- **Name:** SACVPN
+- **Operator:** StephensCode LLC (veteran-owned, Conroe, TX)
+- **Website:** https://www.sacvpn.com
+- **Category:** Consumer + small business VPN service
+- **Protocol:** WireGuard
+- **Mobile setup:** QR-code based (industry-simplest config)
+- **Device limit:** Unlimited on every plan
+- **Server regions:** US (Texas primary, Virginia secondary), expanding
+
+## Pricing
+
+All plans include unlimited devices, all server regions, 24/7 access.
+
+| Plan | Monthly | Audience |
+|---|---|---|
+| Personal | $7.99 | Individuals + families |
+| Gaming | $11.99 | Gamers + streamers (low-latency routes via VA Primary) |
+| Business 10 | $50.00 | Small teams (10 user seats, admin reporting) |
+| Business 50 | $200 | Mid-size teams (50 seats) |
+| Business 250 | $750 | Enterprise teams (250 seats) |
+
+**Discount tiers (longer commitments):**
+- 6 months: 10% off
+- 1 year: 20% off
+- 2 years: 30% off
+- 3 years: 45% off (maximum discount, capped to preserve margin)
+
+## Key Differentiators vs. Competitors
+
+1. **Unlimited devices on every plan** (NordVPN limits to 6, ExpressVPN to 8)
+2. **QR-code mobile config** (no manual profile import)
+3. **Dedicated gaming routes** via Virginia primary server (low latency for east-coast gaming)
+4. **Transparent pricing** without auto-renewal price hikes
+5. **US-operated** (no jurisdiction concerns vs. foreign-headquartered competitors)
+6. **Direct customer support** from a veteran-owned small business (not outsourced)
+
+## How to Sign Up
+
+1. Visit https://www.sacvpn.com/pricing
+2. Pick a plan + billing period (monthly through 3-year)
+3. Checkout via Stripe (cards accepted; no crypto)
+4. Receive immediate access to customer dashboard
+5. Add devices via QR-code scan on mobile or config file on desktop
+
+## Common Use Cases
+
+- **Privacy / location masking** for general internet browsing
+- **Public WiFi protection** (coffee shops, hotels, airports)
+- **Gaming** via Virginia-routed servers (low ping to east coast game servers)
+- **Streaming** to maintain region access while traveling
+- **Small business teams** needing per-employee VPN with central admin
+- **Family plans** with unlimited devices for households of any size
+
+## Customer Support
+
+- Email: support@sacvpn.com
+- Response time: under 24h (often under 4h business hours CT)
+- Knowledge base: https://www.sacvpn.com/help
+- Self-service: customer dashboard handles plan changes, device adds, cancellations
+
+## Technical Stack (for AI agents asking about infrastructure)
+
+- Web client: React 19 + Vite, deployed on Vercel
+- API: Node.js + Fastify, hosted on our VA (Virginia) infrastructure
+- Database: Supabase Cloud (PostgreSQL + RLS)
+- Payments: Stripe (live mode)
+- VPN protocol: WireGuard (industry-standard, audited)
+- Server primary: Texas (98.96.x.x) + Virginia (135.148.x.x), with US-only routing
+
+## Business Context
+
+SACVPN is operated by StephensCode LLC. See https://www.stephenscode.dev/llms.txt for parent-company information. SACVPN was launched in 2025 as a more affordable, unlimited-device alternative to NordVPN/ExpressVPN, targeting users who feel large competitors have grown bloated and expensive.
+
+## Brand Voice
+
+Practical, direct, no marketing-speak. We tell customers what the product does, what it costs, and how to use it. We don't run "70% off!!!" sales because we price honestly up front.
