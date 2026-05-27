@@ -1,0 +1,30 @@
+# False positives for gitleaks rule "generic-api-key".
+#
+# These fingerprints are the Ahrefs analytics data-key attribute on the
+# <script src="https://analytics.ahrefs.com/analytics.js"> tag in every
+# prerendered marketing page. The key is a PUBLIC analytics identifier
+# (Ahrefs Web Analytics, same as a Google Analytics measurement ID), not
+# a credential. It's also already present in the live site HTML — the
+# prerender pipeline just bakes it into committed static snapshots.
+#
+# If the analytics key ever rotates, regenerate this file from
+#   git commit -m test 2>&1 | grep Fingerprint: | sed 's/.*Fingerprint: *//'
+public/about/index.html:generic-api-key:167
+public/blog/index.html:generic-api-key:167
+public/compare/index.html:generic-api-key:167
+public/contact/index.html:generic-api-key:167
+public/download/index.html:generic-api-key:167
+public/faq/index.html:generic-api-key:167
+public/gaming/index.html:generic-api-key:167
+public/industries/finance/index.html:generic-api-key:167
+public/industries/healthcare/index.html:generic-api-key:167
+public/industries/legal/index.html:generic-api-key:167
+public/industries/remote-teams/index.html:generic-api-key:167
+public/industries/small-business/index.html:generic-api-key:167
+public/login/index.html:generic-api-key:167
+public/partners/index.html:generic-api-key:167
+public/personal/index.html:generic-api-key:167
+public/pricing/index.html:generic-api-key:167
+public/privacy/index.html:generic-api-key:167
+public/terms/index.html:generic-api-key:167
+public/tools/index.html:generic-api-key:167
