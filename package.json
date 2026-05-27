@@ -9,8 +9,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "prerender:local": "vite build && node ./scripts/prerender.mjs && bash ./scripts/sync-public.sh",
-    "prerender": "node ./scripts/prerender.mjs",
     "preview": "vite preview",
     "scvpn:postsetup": "node ./scripts/scvpn-postsetup.js",
     "test:e2e": "npx playwright test",
