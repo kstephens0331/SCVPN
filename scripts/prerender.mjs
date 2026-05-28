@@ -18,7 +18,7 @@
 // SPA was returning identical 9120-byte HTML for every route, flagging
 // every page as orphan + empty).
 
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import puppeteer from 'puppeteer';
@@ -40,6 +40,21 @@ const ROUTES = [
   '/login',
   '/about',
   '/blog',
+  // Blog posts: prerendered so each gets a self-referential canonical (was
+  // inheriting the homepage canonical -> Ahrefs "non-canonical page in sitemap").
+  '/blog/what-is-vpn-complete-guide',
+  '/blog/wireguard-vs-openvpn-comparison',
+  '/blog/vpn-for-remote-work-security',
+  '/blog/protect-privacy-online-2025',
+  '/blog/vpn-setup-guide-beginners',
+  '/blog/business-vpn-benefits',
+  '/blog/public-wifi-security-risks',
+  '/blog/vpn-gaming-benefits',
+  '/blog/vpn-streaming-unblock-content',
+  '/blog/vpn-router-setup-guide',
+  '/blog/how-to-choose-business-vpn',
+  '/blog/hipaa-vpn-requirements-healthcare',
+  '/blog/remote-work-security-best-practices',
   '/terms',
   '/privacy',
   '/download',
@@ -59,6 +74,7 @@ const PORT = 5174;
 const BASE = `http://localhost:${PORT}`;
 const PLACE_JS = '__VITE_BUNDLE_JS__';
 const PLACE_CSS = '__VITE_BUNDLE_CSS__';
+const ORIGIN = 'https://www.sacvpn.com';
 
 console.log(`[prerender] Starting vite preview on port ${PORT}...`);
 const preview = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
@@ -127,6 +143,22 @@ function placeholderizeBundlePaths(html) {
     .replace(/\/assets\/[A-Za-z0-9_-]+\.css/g, PLACE_CSS);
 }
 
+// Every prerendered page inherits the static root canonical + og:url from
+// index.html (the homepage URL), so Ahrefs flagged non-home pages as
+// "Open Graph URL not matching canonical" + "non-canonical page in sitemap".
+// Force a self-referential canonical + og:url for the route being prerendered.
+function fixSeoUrls(html, route) {
+  const url = route === '/' ? `${ORIGIN}/` : `${ORIGIN}${route}`;
+  // Remove ALL existing canonical + og:url tags (a page may carry both the
+  // static root one inherited from index.html AND a Helmet-injected one), then
+  // add exactly one self-referential pair so there are never duplicates.
+  html = html.replace(/<link[^>]*rel="canonical"[^>]*>/gi, '');
+  html = html.replace(/<meta[^>]*property="og:url"[^>]*>/gi, '');
+  const tags = `<link rel="canonical" href="${url}" /><meta property="og:url" content="${url}" />`;
+  html = html.replace(/<head[^>]*>/i, (m) => `${m}${tags}`);
+  return html;
+}
+
 let okCount = 0;
 let failCount = 0;
 const errors = [];
@@ -142,6 +174,7 @@ try {
       await page.close();
 
       rendered = stripStaticHelmetTwins(rendered);
+      rendered = fixSeoUrls(rendered, route);
       rendered = placeholderizeBundlePaths(rendered);
 
       // Root goes to a separate file so the Vite plugin can swap it in at
@@ -161,7 +194,18 @@ try {
   }
 } finally {
   await browser.close();
-  preview.kill();
+  // preview.kill() alone does not terminate the shell-spawned child tree on
+  // Windows -- vite preview keeps the port + an open stdio pipe, which hangs
+  // node after the loop. Kill the whole tree, then force-exit below.
+  try {
+    if (process.platform === 'win32' && preview.pid) {
+      execSync(`taskkill /pid ${preview.pid} /f /t`, { stdio: 'ignore' });
+    } else {
+      preview.kill();
+    }
+  } catch {
+    /* already gone */
+  }
 }
 
 console.log(`\n[prerender] Done. ${okCount} ok, ${failCount} failed.`);
@@ -170,3 +214,6 @@ if (errors.length > 0) {
   for (const e of errors) console.error(`  ${e.route}: ${e.error}`);
   process.exit(failCount === ROUTES.length ? 1 : 0);
 }
+
+// Force exit: any orphaned child handle would otherwise keep node alive.
+process.exit(0);

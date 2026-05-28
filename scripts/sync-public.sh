@@ -27,6 +27,19 @@ PUBLIC=public
 ROUTES=(
   about
   blog
+  blog/what-is-vpn-complete-guide
+  blog/wireguard-vs-openvpn-comparison
+  blog/vpn-for-remote-work-security
+  blog/protect-privacy-online-2025
+  blog/vpn-setup-guide-beginners
+  blog/business-vpn-benefits
+  blog/public-wifi-security-risks
+  blog/vpn-gaming-benefits
+  blog/vpn-streaming-unblock-content
+  blog/vpn-router-setup-guide
+  blog/how-to-choose-business-vpn
+  blog/hipaa-vpn-requirements-healthcare
+  blog/remote-work-security-best-practices
   compare
   contact
   download
